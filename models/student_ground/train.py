@@ -3,7 +3,7 @@
 Student segmentation network — knowledge distillation from ensemble.
 
 Trains a lightweight segmentation model on ensemble pseudo-labels
-(soft confidence maps from ensemble_voting.py).
+(soft confidence maps from segmentation/ground_utils.py's ensemble subcommand).
 
 Three model variants:
     dinov2_base   — frozen DINOv2-Base + L-Decoder (~1.1M trainable params)
@@ -402,7 +402,7 @@ def main():
 
         if not ensemble_dir.exists():
             print(f"ERROR: Ensemble directory not found: {ensemble_dir}")
-            print("Run ensemble_voting.py first.")
+            print("Run `python segmentation/ground_utils.py ensemble` first.")
             sys.exit(1)
 
         ens_tag = ("weighted" if args.ensemble_weighted else "majority") + f"_{args.ensemble_threshold}"

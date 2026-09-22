@@ -793,7 +793,7 @@ with tab_ensemble:
     has_ensemble = any(d["mask"] is not None for d in ensemble_data.values())
 
     if not has_ensemble:
-        st.info("No ensemble results available yet. Run `ensemble_voting.py` first.")
+        st.info("No ensemble results available yet. Run `python segmentation/ground_utils.py ensemble` first.")
     elif original is None:
         st.warning("Original image not found")
     else:

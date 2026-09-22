@@ -22,7 +22,7 @@ SAT_MAX="${SAT_MAX:-30}"
 VAL_MIN="${VAL_MIN:-200}"
 GROUND_MASK_DIR="${GROUND_MASK_DIR:-${MASTER_DIR}/preprocessing/segmentation/student_ground_output/mobilenet_ft}"
 
-SCRIPT="${MASTER_DIR}/segmentation/hsv_snow_baseline.py"
+SCRIPT="${MASTER_DIR}/segmentation/snow_utils.py"
 
 CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
 if [ -z "${CONTAINER}" ] || [ ! -f "${CONTAINER}" ]; then
@@ -68,7 +68,7 @@ srun \
     echo 'Started at \$(date)'
     echo ''
 
-    python ${SCRIPT} \
+    python ${SCRIPT} baseline \
         --data-dir ${DATA_DIR} \
         --output-dir ${OUTPUT_DIR} \
         --sat-max ${SAT_MAX} \

@@ -54,10 +54,8 @@ mmcv
 mmsegmentation
 plotly
 streamlit
-
-# --- added: imported by this repo but missing from the original cluster file ---
-optuna              # models/multi_head/hp_search_multihead.py, preprocessing/qa/hp_search_qa_cnn.py
-mlflow               # models/multi_head/train_multihead.py, hp_search_multihead.py
-timm                 # models/student_ground/models.py
-PyQt6                # tools/viewer/app.py (only needed for the viewer)
-imageio-ffmpeg       # models/temporal_snow/animate_periods.py
+optuna
+mlflow
+timm
+PyQt6
+imageio-ffmpeg

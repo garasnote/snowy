@@ -332,7 +332,7 @@ def main():
 
         if not ensemble_dir.exists():
             print(f"ERROR: Snow ensemble directory not found: {ensemble_dir}")
-            print("Run ensemble_snow_voting.py first.")
+            print("Run `python segmentation/snow_utils.py ensemble` first.")
             sys.exit(1)
         run_name = f"snow_{args.model_variant}_maj{args.ensemble_threshold}_{ts}"
 

@@ -24,7 +24,7 @@ TEXT_PROMPT="${TEXT_PROMPT:-snow}"
 SAMPLE="${SAMPLE:-0}"
 DEBUG="${DEBUG:-0}"
 
-SCRIPT="${MASTER_DIR}/segmentation/clipseg_snow_segmentation.py"
+SCRIPT="${MASTER_DIR}/segmentation/snow_teachers.py"
 
 # HuggingFace token
 HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
@@ -87,7 +87,7 @@ srun \
     nvidia-smi
     echo ''
 
-    python ${SCRIPT} \
+    python ${SCRIPT} clipseg \
         --data-dir ${DATA_DIR} \
         --output-dir ${OUTPUT_DIR} \
         --text-prompt '${TEXT_PROMPT}' \

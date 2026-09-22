@@ -23,7 +23,7 @@ CONF="${CONF:-0.25}"
 SAMPLE="${SAMPLE:-0}"
 DEBUG="${DEBUG:-0}"
 
-SCRIPT="${MASTER_DIR}/segmentation/yoloe_snow_segmentation.py"
+SCRIPT="${MASTER_DIR}/segmentation/snow_teachers.py"
 
 CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
 if [ -z "${CONTAINER}" ] || [ ! -f "${CONTAINER}" ]; then
@@ -79,7 +79,7 @@ srun \
     nvidia-smi
     echo ''
 
-    python ${SCRIPT} \
+    python ${SCRIPT} yoloe \
         --data-dir ${DATA_DIR} \
         --output-dir ${OUTPUT_DIR} \
         --model-size ${MODEL_SIZE} \

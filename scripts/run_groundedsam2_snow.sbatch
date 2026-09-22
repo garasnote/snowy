@@ -24,7 +24,7 @@ TEXT_THRESHOLD="${TEXT_THRESHOLD:-0.25}"
 SAMPLE="${SAMPLE:-0}"
 DEBUG="${DEBUG:-0}"
 
-SCRIPT="${MASTER_DIR}/segmentation/grounded_sam2_snow_segmentation.py"
+SCRIPT="${MASTER_DIR}/segmentation/snow_teachers.py"
 
 # HuggingFace token
 HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
@@ -90,7 +90,7 @@ srun \
     nvidia-smi
     echo ''
 
-    python ${SCRIPT} \
+    python ${SCRIPT} groundedsam2 \
         --data-dir ${DATA_DIR} \
         --output-dir ${OUTPUT_DIR} \
         --box-threshold ${BOX_THRESHOLD} \

@@ -21,7 +21,7 @@ srun \
   --container-workdir=${MASTER_DIR} \
   bash -c "
     set -e
-    python segmentation/baseline_ground.py --data-dir data/
+    python segmentation/ground_utils.py baseline --data-dir data/
   "
 
 echo ""

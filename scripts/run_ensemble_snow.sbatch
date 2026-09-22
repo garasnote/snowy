@@ -23,7 +23,7 @@ CAMERAS="${CAMERAS:-}"
 WORKERS="${WORKERS:-16}"
 DEBUG="${DEBUG:-0}"
 
-SCRIPT="${MASTER_DIR}/segmentation/ensemble_snow_voting.py"
+SCRIPT="${MASTER_DIR}/segmentation/snow_utils.py"
 
 CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
 if [ -z "${CONTAINER}" ] || [ ! -f "${CONTAINER}" ]; then
@@ -79,7 +79,7 @@ srun \
     echo 'Started at \$(date)'
     echo ''
 
-    python ${SCRIPT} \
+    python ${SCRIPT} ensemble \
         --min-votes ${MIN_VOTES} \
         --min-methods ${MIN_METHODS} \
         --workers ${WORKERS} \

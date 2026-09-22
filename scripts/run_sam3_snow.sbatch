@@ -26,7 +26,7 @@ DEBUG="${DEBUG:-0}"
 GROUND_MASK_DIR="${GROUND_MASK_DIR:-}"
 NO_SKY="${NO_SKY:-0}"
 
-SCRIPT="${MASTER_DIR}/segmentation/sam3_snow_segmentation.py"
+SCRIPT="${MASTER_DIR}/segmentation/snow_teachers.py"
 
 # HuggingFace token
 HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
@@ -99,7 +99,7 @@ srun \
     nvidia-smi
     echo ''
 
-    python ${SCRIPT} \
+    python ${SCRIPT} sam3 \
         --data-dir ${DATA_DIR} \
         --output-dir ${OUTPUT_DIR} \
         --threshold ${THRESHOLD} \

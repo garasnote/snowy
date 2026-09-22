@@ -11,11 +11,28 @@ independent ARSO meteorological station snow-presence records.
 - `eval_all.py` — unified evaluation script for all ground/snow/QA methods
   (teachers, ensembles, students, baselines), in-distribution and OOD.
 - `eval_ood_per_camera.py` — per-camera OOD breakdown (ground/snow/QA).
-- `segmentation/` — zero-shot teacher / pseudo-label generation: DeepLabV3+,
-  SegFormer, CLIPSeg, Florence-2, GroundedSAM2, SAM3, YOLOE, SegGPT, and
-  PCA/depth-based baselines, plus majority-vote ensembling of their outputs
-  into the pseudo-labels the students in `models/student_ground/` and
-  `models/student_snow/` are distilled from.
+- `segmentation/` — zero-shot teacher / pseudo-label generation, the pseudo-
+  labels the students in `models/student_ground/` and `models/student_snow/`
+  are distilled from:
+  - `ground_teachers.py` — DeepLabV3+, SegFormer, SAM3 (text / DINOv2-guided),
+    DINOv2-PCA, Depth Anything V2 (one subcommand each; was 5 separate scripts).
+  - `ground_utils.py` — the Sobel/fixed-fraction baseline and the majority-vote
+    ensemble that combines the teachers above (was 2 separate scripts).
+  - `snow_teachers.py` — CLIPSeg, Florence-2, GroundedSAM2, SAM3, YOLOE-26,
+    SegGPT (one subcommand each; was 6 separate scripts).
+  - `snow_utils.py` — the HSV baseline, its EER threshold-tuning helper, and
+    the majority-vote ensemble across the snow teachers (was 3 separate
+    scripts; note in the file: this HSV baseline is not the PCA Blue-Band
+    baseline reported in the paper, which never made it back from the
+    cluster into this repo).
+  - `sam_wrapper.py` — shared SAM3 wrapper used by the `sam3` subcommand in
+    both teacher files.
+  - `clip_snow_to_ground.py` — post-processing utility, ANDs snow masks with
+    ground masks.
+  - `dinov3_pca_segmentation.py`, `fusion_depth_pca.py` — exploratory ground
+    variants not reported in the paper (the paper uses DINOv2-PCA).
+  - `resegment_depth.py` — re-run ground segmentation from cached depth maps
+    without a GPU.
 - `models/student_ground/`, `models/student_snow/` — knowledge-distillation
   student training and inference (pseudo-label ensembles + GT fine-tuning,
   MobileNetV3 / EfficientNet-B0 / DINOv2 / DINOv3 / ConvNeXt / ViT-LoRA
@@ -34,6 +51,10 @@ independent ARSO meteorological station snow-presence records.
 - `tools/viewer/app.py` — PyQt desktop viewer for inspecting predictions,
   running batch inference, and comparing model checkpoints against the
   timeseries.
+- `tools/app_segmentation_comparison.py` — earlier Streamlit dashboard for
+  comparing ground/snow segmentation methods side by side, from before the
+  PyQt viewer above replaced it for day-to-day use. Run with
+  `streamlit run tools/app_segmentation_comparison.py`.
 - `scripts/` — SLURM sbatch job scripts used to run training/evaluation on
   the FRIDA HPC cluster.
 

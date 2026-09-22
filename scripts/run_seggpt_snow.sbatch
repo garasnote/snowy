@@ -21,7 +21,7 @@ SAMPLE="${SAMPLE:-0}"
 NUM_PROMPTS="${NUM_PROMPTS:-5}"
 DEBUG="${DEBUG:-0}"
 
-SCRIPT="${MASTER_DIR}/segmentation/seggpt_snow_segmentation.py"
+SCRIPT="${MASTER_DIR}/segmentation/snow_teachers.py"
 CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
 
 # HuggingFace token
@@ -74,7 +74,7 @@ srun \
     nvidia-smi
     echo ''
 
-    python ${SCRIPT} \
+    python ${SCRIPT} seggpt \
         --data-dir ${DATA_DIR} \
         --ann-dir ${ANN_DIR} \
         --fallback-img-dirs ${MASTER_DIR}/night_images \

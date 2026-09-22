@@ -1,7 +1,8 @@
 """Dataset for student segmentation training.
 
 Loads original webcam images + ensemble confidence maps (soft pseudo-labels)
-produced by ensemble_voting.py. Both image and mask are jointly augmented.
+produced by segmentation/ground_utils.py's ensemble subcommand. Both image
+and mask are jointly augmented.
 
 Also supports fine-tuning on real ground truth annotations from Label Studio
 (ground_annotations.json with RLE-encoded brush masks).
