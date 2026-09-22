@@ -1037,7 +1037,7 @@ with tab_fusion:
     has_sources = pca_mask is not None or depth_ground_mask is not None
 
     if not has_fusion and not has_sources:
-        st.info("No fusion results available yet. Run `fusion_depth_pca.py` first.")
+        st.info("No fusion results available (DINOv2+depth fusion was an exploratory method, dropped from the repo).")
     elif original is None:
         st.warning("Original image not found")
     else:

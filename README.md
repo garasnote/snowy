@@ -28,10 +28,9 @@ independent ARSO meteorological station snow-presence records.
     subcommand; was 4 separate scripts; note in the file: the HSV baseline
     is not the PCA Blue-Band baseline reported in the paper, which never
     made it back from the cluster into this repo).
-  - `sam_wrapper.py` — shared SAM3 wrapper used by the `sam3` subcommand in
-    both teacher files.
-  - `dinov3_pca_segmentation.py`, `fusion_depth_pca.py` — exploratory ground
-    variants not reported in the paper (the paper uses DINOv2-PCA).
+  - `SAMWrapper`, the SAM3 wrapper class, lives inside `snow_teachers.py`
+    (used only by its `sam3` subcommand; ground_teachers.py's own `sam3`
+    subcommand is self-contained).
 - `models/student_ground/`, `models/student_snow/` — knowledge-distillation
   student training and inference (pseudo-label ensembles + GT fine-tuning,
   MobileNetV3 / EfficientNet-B0 / DINOv2 / DINOv3 / ConvNeXt / ViT-LoRA

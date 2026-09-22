@@ -19,8 +19,8 @@ its original CLI flags, now behind a subcommand:
 
 Run `python snow_teachers.py <teacher> --help` for that teacher's full
 option list (e.g. seggpt's few-shot prompt selection, sam3's ground-mask
-clipping). sam3 depends on sam_wrapper.py (kept as a separate file, same
-directory).
+clipping). SAMWrapper (formerly sam_wrapper.py) lives here too, used only
+by the sam3 subcommand.
 """
 
 import argparse
@@ -33,6 +33,15 @@ import numpy as np
 import torch
 from PIL import Image, ImageDraw
 from tqdm import tqdm
+from typing import Optional
+
+try:
+    from sam3.model_builder import build_sam3_image_model
+    from sam3.model.sam3_image_processor import Sam3Processor
+    SAM3_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: sam3 not installed. SAMWrapper will fail if used. Error: {e}")
+    SAM3_AVAILABLE = False
 
 _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent
@@ -635,8 +644,70 @@ def run_groundedsam2(args):
 
 
 # =============================================================================
-# SAM3 — text-prompted (via sam_wrapper.SAMWrapper), optional ground-mask clip
+# SAM3 — text-prompted (via SAMWrapper below), optional ground-mask clip
 # =============================================================================
+
+class SAMWrapper:
+    """
+    Wrapper for the Segment Anything Model 3 (SAM3) using the GitHub package.
+    Uses text prompts for segmentation.
+    """
+    def __init__(self, device: str = "cuda"):
+        self.device = device
+        if not SAM3_AVAILABLE:
+            raise ImportError("sam3 library is missing. Install from: https://github.com/facebookresearch/sam3")
+
+        print(f"Loading SAM3 model from HuggingFace...")
+        self.model = build_sam3_image_model(
+            checkpoint_path=None,
+            load_from_HF=True,
+            device=device
+        )
+        self.processor = Sam3Processor(self.model)
+        self.current_image = None
+        print("SAM3 model loaded successfully.")
+
+    def set_image(self, image: np.ndarray):
+        if isinstance(image, np.ndarray):
+            self.current_image = Image.fromarray(image)
+        else:
+            self.current_image = image
+
+    def segment_with_text(self, image: np.ndarray, text_prompt: str, threshold: float = 0.5) -> np.ndarray:
+        """
+        Segment image using text prompt. Returns binary mask (H, W) with
+        all detected instances combined.
+        """
+        if isinstance(image, np.ndarray):
+            pil_image = Image.fromarray(image)
+        else:
+            pil_image = image
+
+        self.processor.confidence_threshold = threshold
+
+        state = self.processor.set_image(pil_image)
+        state = self.processor.set_text_prompt(text_prompt, state)
+
+        if 'masks' in state and state['masks'] is not None and len(state['masks']) > 0:
+            masks = state['masks']  # Already thresholded at 0.5
+            combined_mask = torch.any(masks.squeeze(1), dim=0).cpu().numpy().astype(np.uint8)
+        else:
+            h, w = image.shape[:2]
+            combined_mask = np.zeros((h, w), dtype=np.uint8)
+
+        return combined_mask
+
+    def segment_sky(self, image: np.ndarray) -> np.ndarray:
+        return self.segment_with_text(image, "sky", threshold=0.3)
+
+    def segment_snow(self, image: np.ndarray, sky_mask: Optional[np.ndarray] = None) -> np.ndarray:
+        snow_mask = self.segment_with_text(image, "snow", threshold=0.4)
+
+        if sky_mask is not None:
+            snow_mask = np.logical_and(snow_mask, np.logical_not(sky_mask)).astype(np.uint8)
+
+        return snow_mask
+
 
 def sam3_process_image(image_path, sam, threshold, output_dir,
                         ground_mask_dir=None, mask_sky=True, debug=False):
@@ -723,7 +794,7 @@ def sam3_visualize(image, snow_mask, sky_mask, output_path, title=""):
 
 
 def add_sam3_subparser(subparsers):
-    p = subparsers.add_parser("sam3", help="SAM3 text-prompted (via sam_wrapper.SAMWrapper)")
+    p = subparsers.add_parser("sam3", help="SAM3 text-prompted (via SAMWrapper)")
     _add_common_args(p, "preprocessing/segmentation/sam3_snow_output")
     p.add_argument("--ground-mask-dir", type=str, default=None,
                     help="Ground mask dir to restrict snow to ground region")
@@ -735,8 +806,6 @@ def add_sam3_subparser(subparsers):
 
 
 def run_sam3(args):
-    from sam_wrapper import SAMWrapper
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

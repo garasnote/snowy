@@ -40,8 +40,7 @@ def load_depth_luminance(path):
     """Load inferno-colored depth PNG → float32 [0,1] via luminance.
 
     Inferno colormap has monotonically increasing luminance, so perceived
-    luminance (BT.601) recovers the correct depth ordering. Same approach
-    as fusion_depth_pca.py.
+    luminance (BT.601) recovers the correct depth ordering.
     """
     img = np.array(Image.open(path).convert("RGB"))
     depth = (0.299 * img[:, :, 0] + 0.587 * img[:, :, 1] + 0.114 * img[:, :, 2]) / 255.0
