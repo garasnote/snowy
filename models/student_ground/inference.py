@@ -12,12 +12,12 @@ Follows the same output structure as other segmentation methods:
 Usage:
     # Single camera
     python inference.py --checkpoint checkpoints/dinov2_base.../best.ckpt
-                        --data-dir /shared/home/juan.osorio/master/data
+                        --data-dir ./data  (or set SNOW_DATA_DIR)
                         --cameras CM00006
 
     # All cameras
     python inference.py --checkpoint checkpoints/dinov2_base.../best.ckpt
-                        --data-dir /shared/home/juan.osorio/master/data
+                        --data-dir ./data  (or set SNOW_DATA_DIR)
 
     # Save probability maps too (useful for further ensembling)
     python inference.py --checkpoint ... --save-prob
@@ -39,6 +39,9 @@ from tqdm import tqdm
 _HERE = Path(__file__).resolve().parent
 if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
+if str(_HERE.parent.parent) not in sys.path:
+    sys.path.insert(0, str(_HERE.parent.parent))
+from paths import DATA_DIR
 
 from student_ground.configs import MODEL_REGISTRY, get_config, IMAGENET_MEAN, IMAGENET_STD
 from student_ground.dataset import load_depth_luminance
@@ -128,7 +131,7 @@ def main():
     parser.add_argument("--checkpoint", type=str, required=True,
                         help="Path to .ckpt file from training")
     parser.add_argument("--data-dir", type=str,
-                        default="/shared/home/juan.osorio/master/data",
+                        default=str(DATA_DIR),
                         help="Root data directory")
     parser.add_argument("--output-dir", type=str, default=None,
                         help="Output directory (default: student_output/ next to data-dir)")

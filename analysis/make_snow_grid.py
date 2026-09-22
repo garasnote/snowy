@@ -9,10 +9,9 @@ import cv2
 import numpy as np
 import pandas as pd
 
-import sys
-BASE_DIR = Path("/shared/home/juan.osorio/master")
+BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
-DATA_DIR = BASE_DIR / "data"
+from paths import DATA_DIR
 SEG_DIR = BASE_DIR / "preprocessing/segmentation"
 GROUND_DIR = SEG_DIR / "student_ground_output/mobilenet_majority3"
 SNOW_DIR = SEG_DIR / "student_snow_output/mobilenet_gt"

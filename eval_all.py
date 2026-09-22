@@ -18,6 +18,9 @@ import sys
 from pathlib import Path
 import json
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import WORKSPACE_DIR
+
 import numpy as np
 import torch
 import cv2
@@ -274,7 +277,7 @@ def eval_ground(args):
 
     cameras = ["CF00001", "CM00009", "CM00014", "CM00070", "CM00075", "CM00080", "CM00102", "CM00108", "CM00112"]
     output_dir = Path("preprocessing/segmentation")
-    workspace_dir = Path("/shared/workspace/lkm/juan.osorio")
+    workspace_dir = WORKSPACE_DIR
     data_dir = Path("data")
 
     gt_masks = {}

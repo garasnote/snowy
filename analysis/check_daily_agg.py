@@ -4,13 +4,15 @@ lands near 3,042 rows."""
 import sys
 from pathlib import Path
 
-_MASTER = Path("/shared/home/juan.osorio/master")
-sys.path.insert(0, str(_MASTER / "models"))
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT))
+sys.path.insert(0, str(_REPO_ROOT / "models"))
+from paths import ANALYSIS_DIR
 
 from temporal_snow.dataset import load_timeseries, aggregate_daily
 
 df, snow_pct_cols = load_timeseries(
-    str(_MASTER / "analysis" / "snow_timeseries.csv"),
+    str(ANALYSIS_DIR / "snow_timeseries.csv"),
     require_target=False, qa_filter=True,
 )
 

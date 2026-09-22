@@ -50,13 +50,17 @@ _DATA = _ROOT / "data"
 _QA   = _ROOT / "preprocessing" / "qa"
 _SEG  = _ROOT / "preprocessing" / "segmentation"
 
+sys.path.insert(0, str(_ROOT))
+from paths import MODEL_CACHE_DIR
+
 # Offline backbone cache — prefer local path over HuggingFace at runtime.
-# Download once: python -c "from transformers import AutoModel, AutoImageProcessor;
-#   AutoModel.from_pretrained('facebook/dinov2-base').save_pretrained('/shared/home/juan.osorio/models/dinov2-base');
-#   AutoImageProcessor.from_pretrained('facebook/dinov2-base').save_pretrained('/shared/home/juan.osorio/models/dinov2-base')"
+# Download once, e.g.: python -c "from transformers import AutoModel, AutoImageProcessor; \
+#   AutoModel.from_pretrained('facebook/dinov2-base').save_pretrained('<MODEL_CACHE_DIR>/dinov2-base'); \
+#   AutoImageProcessor.from_pretrained('facebook/dinov2-base').save_pretrained('<MODEL_CACHE_DIR>/dinov2-base')"
+# where <MODEL_CACHE_DIR> is $SNOW_MODEL_CACHE_DIR or ./model_cache (see paths.py).
 _MODEL_CACHE = {
-    "dinov3_base":  Path("/shared/home/juan.osorio/models/dinov2-base"),
-    "dinov3_large": Path("/shared/home/juan.osorio/models/dinov2-large"),
+    "dinov3_base":  MODEL_CACHE_DIR / "dinov2-base",
+    "dinov3_large": MODEL_CACHE_DIR / "dinov2-large",
 }
 
 sys.path.insert(0, str(_ROOT / "models"))

@@ -60,13 +60,17 @@ from torchmetrics.classification import BinaryF1Score
 from torchvision.utils import make_grid
 
 # Allow running as script: add master/models to sys.path so `student_ground` package resolves
-_HERE = Path(__file__).resolve().parent          # master/models/student_ground/
-_MODELS_DIR = _HERE.parent                       # master/models/
-_SEG_OUTPUT = _HERE.parent.parent / "preprocessing" / "segmentation"  # where output data lives
+_HERE = Path(__file__).resolve().parent          # repo/models/student_ground/
+_MODELS_DIR = _HERE.parent                       # repo/models/
+_REPO_ROOT = _HERE.parent.parent                 # repo/
+_SEG_OUTPUT = _REPO_ROOT / "preprocessing" / "segmentation"  # where output data lives
 
 if str(_MODELS_DIR) not in sys.path:
     sys.path.insert(0, str(_MODELS_DIR))
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
+from paths import DATA_DIR
 from student_ground.configs import MODEL_REGISTRY, get_config, IMAGENET_MEAN, IMAGENET_STD
 from student_ground.dataset import build_dataloaders, build_gt_dataloaders
 from student_ground.losses import combined_loss
@@ -259,14 +263,14 @@ def main():
     parser.add_argument("--checkpoint", type=str, default=None,
                         help="Path to pretrained checkpoint to load before fine-tuning")
     parser.add_argument("--annotations", type=str,
-                        default="/shared/home/juan.osorio/master/data/annotations/ground_annotations.json",
+                        default=str(DATA_DIR / "annotations" / "ground_annotations.json"),
                         help="Path to ground_annotations.json (used with --finetune)")
     parser.add_argument("--depth-dir", type=str, default=None,
                         help="Path to depth maps dir (enables RGBD 4-channel input)")
 
     # Paths
     parser.add_argument("--data-dir", type=str,
-                        default="/shared/home/juan.osorio/master/data",
+                        default=str(DATA_DIR),
                         help="Root data directory (contains camera subdirs)")
     parser.add_argument("--ensemble-dir", type=str, default=None,
                         help="Path to specific ensemble dir (overrides --ensemble-threshold)")

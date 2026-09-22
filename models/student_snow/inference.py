@@ -24,6 +24,9 @@ from tqdm import tqdm
 _HERE = Path(__file__).resolve().parent
 if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
+if str(_HERE.parent.parent) not in sys.path:
+    sys.path.insert(0, str(_HERE.parent.parent))
+from paths import DATA_DIR
 
 from student_ground.configs import MODEL_REGISTRY, get_config, IMAGENET_MEAN, IMAGENET_STD
 from student_ground.dataset import load_depth_luminance
@@ -95,7 +98,7 @@ def main():
     )
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--data-dir", type=str,
-                        default="/shared/home/juan.osorio/master/data",
+                        default=str(DATA_DIR),
                         help="Root data directory")
     parser.add_argument("--output-dir", type=str, default=None,
                         help="Default: student_snow_output/{variant} next to segmentation outputs")

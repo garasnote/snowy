@@ -40,7 +40,18 @@ independent ARSO meteorological station snow-presence records.
 - **Model checkpoints**: several hundred MB to multiple GB each. Available on
   request to the corresponding author.
 - **Manual annotations**: Label Studio exports (ground/snow brush masks, QA
-  taxonomy tags). Available on request.
+  taxonomy tags). These are our own work product, not ARSO's, and are shared
+  freely, no request needed. A persistent link (Zenodo or similar) will be
+  added here once deposited. `[TODO: deposit + link]`
+
+## Configuration
+
+Paths to data, large intermediate outputs, and cached model weights are
+centralized in `paths.py` and overridable via environment variables
+(`SNOW_DATA_DIR`, `SNOW_WORKSPACE_DIR`, `SNOW_MODEL_CACHE_DIR`), falling back
+to local relative directories if unset. No SLURM or specific cluster/account
+layout is required to run the code; the `scripts/*.sbatch` files are provided
+for reference but are not necessary outside that HPC environment.
 
 ## Requirements
 

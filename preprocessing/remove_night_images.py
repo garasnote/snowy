@@ -18,9 +18,13 @@ Usage:
 import argparse
 import csv
 import shutil
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from paths import DATA_DIR
 
 import numpy as np
 from astral import LocationInfo
@@ -146,7 +150,7 @@ def main():
     parser.add_argument(
         "--data-dir",
         type=str,
-        default="/shared/home/juan.osorio/master/data",
+        default=str(DATA_DIR),
         help="Path to data directory with camera folders",
     )
     parser.add_argument(

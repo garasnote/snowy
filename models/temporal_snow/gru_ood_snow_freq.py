@@ -16,8 +16,10 @@ import pandas as pd
 import torch
 
 _HERE = Path(__file__).resolve().parent
-_MASTER = Path("/shared/home/juan.osorio/master")
-sys.path.insert(0, str(_MASTER / "models"))
+_REPO_ROOT = _HERE.parent.parent
+sys.path.insert(0, str(_REPO_ROOT))
+sys.path.insert(0, str(_REPO_ROOT / "models"))
+from paths import ANALYSIS_DIR
 
 from temporal_snow.dataset import load_timeseries, FeatureScaler
 from temporal_snow.train_smoother import TemporalSmootherModule
@@ -67,7 +69,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--checkpoint-dir", required=True,
                      help="Dir containing best-*.ckpt and scaler.json")
-    ap.add_argument("--csv", default=str(_MASTER / "analysis" / "snow_timeseries.csv"))
+    ap.add_argument("--csv", default=str(ANALYSIS_DIR / "snow_timeseries.csv"))
     ap.add_argument("--cameras", nargs="+",
                      default=["CM00054", "CM00067", "CM00071", "CM00115"])
     ap.add_argument("--threshold", type=float, default=0.05)
