@@ -7,12 +7,12 @@
 # deliberately not listed here: setup_environment.sbatch installs them
 # separately, pinned to torch==2.7.0 from the cu126 index (see README).
 #
-# Packages that were in the original cluster file but that nothing in this
-# repo imports (scikit-image, pyarrow, seaborn, plotly, mmengine, mmcv,
-# mmsegmentation, streamlit) are omitted - they belong to the upstream
-# teacher/pseudo-label generation pipeline (e.g. DeepLabV3+ via OpenMMLab),
-# which isn't part of this release. Add them back if you need to reproduce
-# that step too.
+# Packages in the original cluster file that nothing in this repo imports
+# (pyarrow, seaborn) are omitted. Everything else the teacher/pseudo-label
+# generation code under segmentation/ needs (scikit-image, mmengine, mmcv,
+# mmsegmentation for DeepLabV3+ via OpenMMLab; plotly/streamlit for
+# segmentation/app_segmentation_comparison.py) is listed below, since that
+# code is part of this release.
 
 numpy
 opencv-python
@@ -40,6 +40,20 @@ tensorboard
 # Anomaly detection (eval_all.py --types with SubspaceAD/PatchCore/EfficientAD;
 # not part of the paper's reported results, still in the eval script)
 anomalib
+
+# Teacher / pseudo-label generation (segmentation/*.py — zero-shot models
+# distilled into the ground and snow students; DeepLabV3+, SegFormer, CLIPSeg,
+# GroundedSAM2, SAM3, YOLOE, SegGPT, Florence-2, plus PCA/depth-based baselines
+# and one Streamlit comparison app). Versions not pinned here — these were in
+# the original cluster environment without version pins in the pasted source;
+# confirm compatibility with mmengine/mmcv/mmsegmentation's own version
+# constraints against your CUDA/torch build before installing.
+scikit-image
+mmengine
+mmcv
+mmsegmentation
+plotly
+streamlit
 
 # --- added: imported by this repo but missing from the original cluster file ---
 optuna              # models/multi_head/hp_search_multihead.py, preprocessing/qa/hp_search_qa_cnn.py

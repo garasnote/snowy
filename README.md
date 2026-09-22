@@ -11,6 +11,11 @@ independent ARSO meteorological station snow-presence records.
 - `eval_all.py` — unified evaluation script for all ground/snow/QA methods
   (teachers, ensembles, students, baselines), in-distribution and OOD.
 - `eval_ood_per_camera.py` — per-camera OOD breakdown (ground/snow/QA).
+- `segmentation/` — zero-shot teacher / pseudo-label generation: DeepLabV3+,
+  SegFormer, CLIPSeg, Florence-2, GroundedSAM2, SAM3, YOLOE, SegGPT, and
+  PCA/depth-based baselines, plus majority-vote ensembling of their outputs
+  into the pseudo-labels the students in `models/student_ground/` and
+  `models/student_snow/` are distilled from.
 - `models/student_ground/`, `models/student_snow/` — knowledge-distillation
   student training and inference (pseudo-label ensembles + GT fine-tuning,
   MobileNetV3 / EfficientNet-B0 / DINOv2 / DINOv3 / ConvNeXt / ViT-LoRA
