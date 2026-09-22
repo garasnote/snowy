@@ -11,16 +11,16 @@ Requires: grounding-dino-tiny, sam2-hiera-large (auto-downloaded from HF).
 Usage:
     # All cameras
     python grounded_sam2_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data
+        --data-dir data
 
     # Specific cameras, debug overlays
     python grounded_sam2_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data \
+        --data-dir data \
         --cameras CF00001 CM00009 --debug
 
     # Custom thresholds + sample
     python grounded_sam2_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data \
+        --data-dir data \
         --box-threshold 0.25 --text-threshold 0.2 --sample 50
 """
 

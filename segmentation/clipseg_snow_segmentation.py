@@ -13,16 +13,16 @@ Requires: transformers (CLIPSeg is built-in, no extra deps).
 Usage:
     # All cameras
     python clipseg_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data
+        --data-dir data
 
     # Specific cameras, debug overlays
     python clipseg_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data \
+        --data-dir data \
         --cameras CF00001 CM00009 --debug
 
     # Custom threshold + prompt
     python clipseg_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data \
+        --data-dir data \
         --threshold 0.4 --text-prompt "snow on the ground"
 """
 

@@ -8,16 +8,16 @@ then merges all detected snow instances into a single binary mask.
 Usage:
     # All cameras
     python yoloe_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow
+        --data-dir data/balanced_snow
 
     # Specific cameras, debug overlays
     python yoloe_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow \
+        --data-dir data/balanced_snow \
         --cameras CF00001 CM00006 --debug
 
     # Custom model size (s/m/l)
     python yoloe_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow \
+        --data-dir data/balanced_snow \
         --model-size l
 """
 
@@ -163,7 +163,7 @@ def main():
     parser.add_argument("--cameras", nargs="+", default=[],
                         help="Specific cameras (default: all)")
     parser.add_argument("--output-dir", type=str,
-                        default="/d/hpc/home/jo83525/master/preprocessing/segmentation/yoloe_snow_output",
+                        default="preprocessing/segmentation/yoloe_snow_output",
                         help="Output directory")
     parser.add_argument("--model-size", choices=["s", "m", "l"], default="l",
                         help="YOLOe-26 model size (default: l)")

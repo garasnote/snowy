@@ -14,7 +14,7 @@ Usage:
     python baseline_ground.py --image /path/to/image.jpg --debug
 
     # All cameras
-    python baseline_ground.py --data-dir /shared/home/juan.osorio/master/data
+    python baseline_ground.py --data-dir data
 
     # Custom ground fraction
     python baseline_ground.py --data-dir ... --fallback-fraction 0.35

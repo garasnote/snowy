@@ -205,7 +205,7 @@ def main():
     parser.add_argument("--gt", action="store_true",
                         help="Train on GT annotations instead of pseudo-labels")
     parser.add_argument("--ann-dir", type=str,
-                        default="/d/hpc/home/jo83525/master/data/annotations",
+                        default=str(_HERE.parent.parent / "data" / "annotations"),
                         help="GT annotation dir (Label Studio JSON exports)")
     parser.add_argument("--fallback-img-dirs", nargs="*", default=None,
                         help="Extra dirs to search for images (e.g. night_images/)")

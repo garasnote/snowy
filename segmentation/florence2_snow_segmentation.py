@@ -8,16 +8,16 @@ and text prompt "snow" to produce snow masks.
 Usage:
     # All cameras
     python florence2_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow
+        --data-dir data/balanced_snow
 
     # Specific cameras, debug overlays
     python florence2_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow \
+        --data-dir data/balanced_snow \
         --cameras CF00001 CM00006 --debug
 
     # Use base model (faster, less accurate)
     python florence2_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow \
+        --data-dir data/balanced_snow \
         --model-size base
 """
 
@@ -210,7 +210,7 @@ def main():
     parser.add_argument("--cameras", nargs="+", default=[],
                         help="Specific cameras (default: all)")
     parser.add_argument("--output-dir", type=str,
-                        default="/d/hpc/home/jo83525/master/preprocessing/segmentation/florence2_snow_output",
+                        default="preprocessing/segmentation/florence2_snow_output",
                         help="Output directory")
     parser.add_argument("--model-size", choices=["base", "large"],
                         default="large",

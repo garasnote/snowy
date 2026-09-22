@@ -50,9 +50,9 @@ ANOMALY_RESULTS = _MASTER / "models" / "anomaly_snow" / "results"
 
 # Allow override via /shared paths if local data doesn't exist
 if not DATA_DIR.exists():
-    DATA_DIR = Path("/shared/home/juan.osorio/master/data")
+    DATA_DIR = Path("data")
 if not OUTPUT_BASE.exists():
-    OUTPUT_BASE = Path("/shared/home/juan.osorio/master/preprocessing/segmentation")
+    OUTPUT_BASE = Path("preprocessing/segmentation")
     DEPTH_OUTPUT = OUTPUT_BASE / "depth_output"
     SEGFORMER_OUTPUT = OUTPUT_BASE / "segformer_output"
     DEEPLABV3_OUTPUT = OUTPUT_BASE / "deeplabv3_output"
@@ -74,7 +74,7 @@ if not OUTPUT_BASE.exists():
     ENSEMBLE_SNOW_OUTPUT = SNOW_OUTPUT_BASE / "ensemble_snow_output"
     STUDENT_SNOW_OUTPUT = SNOW_OUTPUT_BASE / "student_snow_output"
     SUBSPACE_AD_OUTPUT = SNOW_OUTPUT_BASE / "subspace_ad_output"
-    ANOMALY_RESULTS = Path("/shared/home/juan.osorio/master/models/anomaly_snow/results")
+    ANOMALY_RESULTS = Path("models/anomaly_snow/results")
 
 
 # ── excluded cameras ─────────────────────────────────────────────────────────

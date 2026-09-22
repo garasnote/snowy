@@ -14,18 +14,18 @@ Requires: transformers>=4.36.0, torch, torchvision, pillow.
 Usage:
     # Auto-select prompts from GT annotations
     python seggpt_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data \
-        --ann-dir /shared/home/juan.osorio/master/data/annotations
+        --data-dir data \
+        --ann-dir data/annotations
 
     # Specific cameras
     python seggpt_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data \
-        --ann-dir /shared/home/juan.osorio/master/data/annotations \
+        --data-dir data \
+        --ann-dir data/annotations \
         --cameras CF00001 CM00009
 
     # Manual prompt dir (expects {camera}/{stem}.jpg + {camera}/{stem}_snow.png)
     python seggpt_snow_segmentation.py \
-        --data-dir /shared/home/juan.osorio/master/data \
+        --data-dir data \
         --prompt-dir /path/to/prompts --num-prompts 5
 """
 

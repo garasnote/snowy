@@ -14,12 +14,12 @@ Usage:
     python sam3_dino_segmentation.py --image /path/to/image.jpg --method dino+sam --debug
 
     # Batch
-    python sam3_dino_segmentation.py --data-dir /shared/home/juan.osorio/master/data \
+    python sam3_dino_segmentation.py --data-dir data \
         --cameras CM00006 CM00024 --sample 50
 
     # Canonical views
     python sam3_dino_segmentation.py \
-        --canonical-dir /shared/home/juan.osorio/master/dinov3/canonical_views
+        --canonical-dir dinov3/canonical_views
 """
 
 import argparse
@@ -408,7 +408,7 @@ def main():
     parser.add_argument("--cameras", nargs="+", default=[],
                         help="Specific camera folders (default: all)")
     parser.add_argument("--output-dir", type=str,
-                        default="/shared/home/juan.osorio/master/preprocessing/segmentation/sam3_dino_output",
+                        default="preprocessing/segmentation/sam3_dino_output",
                         help="Output directory")
     parser.add_argument("--method", choices=["text", "dino+sam"],
                         default="text",

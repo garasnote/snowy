@@ -8,22 +8,22 @@ Optionally masks out sky regions first.
 Usage:
     # All cameras
     python sam3_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow \
-        --output-dir /d/hpc/home/jo83525/master/preprocessing/segmentation/sam3_snow_output
+        --data-dir data/balanced_snow \
+        --output-dir preprocessing/segmentation/sam3_snow_output
 
     # Specific cameras, with debug overlays
     python sam3_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow \
+        --data-dir data/balanced_snow \
         --cameras CF00001 CM00006 --debug
 
     # With ground mask filtering (snow only on ground)
     python sam3_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow \
-        --ground-mask-dir /d/hpc/home/jo83525/master/preprocessing/segmentation/student_ground_output/mobilenet_ft
+        --data-dir data/balanced_snow \
+        --ground-mask-dir preprocessing/segmentation/student_ground_output/mobilenet_ft
 
     # Custom threshold + sample
     python sam3_snow_segmentation.py \
-        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow \
+        --data-dir data/balanced_snow \
         --threshold 0.3 --sample 50
 """
 
@@ -148,7 +148,7 @@ def main():
     parser.add_argument("--cameras", nargs="+", default=[],
                         help="Specific cameras (default: all)")
     parser.add_argument("--output-dir", type=str,
-                        default="/d/hpc/home/jo83525/master/preprocessing/segmentation/sam3_snow_output",
+                        default="preprocessing/segmentation/sam3_snow_output",
                         help="Output directory")
     parser.add_argument("--ground-mask-dir", type=str, default=None,
                         help="Ground mask dir to restrict snow to ground region")

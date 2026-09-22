@@ -10,15 +10,15 @@ Usage:
     python depth_segmentation.py --image /path/to/image.jpg --debug
 
     # All cameras
-    python depth_segmentation.py --data-dir /shared/home/juan.osorio/master/data
+    python depth_segmentation.py --data-dir data
 
     # Specific cameras, subsample
-    python depth_segmentation.py --data-dir /shared/home/juan.osorio/master/data \
+    python depth_segmentation.py --data-dir data \
         --cameras CM00006 CM00024 --sample 50
 
     # Run on canonical views from DINOv3 pipeline
     python depth_segmentation.py \
-        --canonical-dir /shared/home/juan.osorio/master/dinov3/canonical_views
+        --canonical-dir dinov3/canonical_views
 """
 
 import argparse
@@ -676,7 +676,7 @@ def main():
     parser.add_argument("--cameras", nargs="+", default=[],
                         help="Specific camera folders (default: all)")
     parser.add_argument("--output-dir", type=str,
-                        default="/shared/home/juan.osorio/master/preprocessing/segmentation/depth_output",
+                        default="preprocessing/segmentation/depth_output",
                         help="Output directory")
     parser.add_argument("--model-size", choices=["small", "base", "large"],
                         default="large", help="Depth Anything V2 model size")

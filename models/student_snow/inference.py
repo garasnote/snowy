@@ -7,7 +7,7 @@ and uses student_snow output path conventions.
 
 Usage:
     python inference.py --checkpoint checkpoints/snow_mobilenet_.../best.ckpt
-                        --data-dir /d/hpc/home/jo83525/master/data/balanced_snow
+                        --data-dir ./data/balanced_snow
     python inference.py --checkpoint ... --cameras CF00001 --save-prob
 """
 

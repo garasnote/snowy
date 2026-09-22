@@ -15,14 +15,14 @@ Usage:
     python dinov2_pca_segmentation.py --image /path/to/image.jpg --debug
 
     # All cameras
-    python dinov2_pca_segmentation.py --data-dir /shared/home/juan.osorio/master/data
+    python dinov2_pca_segmentation.py --data-dir data
 
     # Specific cameras
-    python dinov2_pca_segmentation.py --data-dir /shared/home/juan.osorio/master/data \
+    python dinov2_pca_segmentation.py --data-dir data \
         --cameras CM00006 CM00024 --sample 50
 
     # Use larger DINOv2 model
-    python dinov2_pca_segmentation.py --data-dir /shared/home/juan.osorio/master/data \
+    python dinov2_pca_segmentation.py --data-dir data \
         --model facebook/dinov2-large
 """
 
@@ -316,7 +316,7 @@ def main():
     parser.add_argument("--cameras", nargs="+", default=[],
                         help="Specific camera folders (default: all)")
     parser.add_argument("--output-dir", type=str,
-                        default="/shared/home/juan.osorio/master/preprocessing/segmentation/dinov2_pca_output",
+                        default="preprocessing/segmentation/dinov2_pca_output",
                         help="Output directory")
     parser.add_argument("--model", type=str, default="facebook/dinov2-base",
                         help="DINOv2 model (base, large, giant)")

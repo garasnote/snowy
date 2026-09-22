@@ -11,15 +11,15 @@ Usage:
     python deeplabv3_segmentation.py --image /path/to/image.jpg --debug
 
     # All cameras
-    python deeplabv3_segmentation.py --data-dir /shared/home/juan.osorio/master/data
+    python deeplabv3_segmentation.py --data-dir data
 
     # Specific cameras, subsample
-    python deeplabv3_segmentation.py --data-dir /shared/home/juan.osorio/master/data \
+    python deeplabv3_segmentation.py --data-dir data \
         --cameras CM00006 CM00024 --sample 50
 
     # Run on canonical views from DINOv3 pipeline
     python deeplabv3_segmentation.py \
-        --canonical-dir /shared/home/juan.osorio/master/dinov3/canonical_views
+        --canonical-dir dinov3/canonical_views
 """
 
 import argparse
@@ -330,7 +330,7 @@ def main():
     parser.add_argument("--cameras", nargs="+", default=[],
                         help="Specific camera folders (default: all)")
     parser.add_argument("--output-dir", type=str,
-                        default="/shared/home/juan.osorio/master/preprocessing/segmentation/deeplabv3_output",
+                        default="preprocessing/segmentation/deeplabv3_output",
                         help="Output directory")
     parser.add_argument("--model", type=str,
                         default="deeplabv3plus_r101-d8_4xb4-160k_ade20k-512x512",

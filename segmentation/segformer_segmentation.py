@@ -11,15 +11,15 @@ Usage:
     python segformer_segmentation.py --image /path/to/image.jpg --debug
 
     # All cameras
-    python segformer_segmentation.py --data-dir /shared/home/juan.osorio/master/data
+    python segformer_segmentation.py --data-dir data
 
     # Specific cameras, subsample
-    python segformer_segmentation.py --data-dir /shared/home/juan.osorio/master/data \
+    python segformer_segmentation.py --data-dir data \
         --cameras CM00006 CM00024 --sample 50
 
     # Run on canonical views from DINOv3 pipeline
     python segformer_segmentation.py \
-        --canonical-dir /shared/home/juan.osorio/master/dinov3/canonical_views
+        --canonical-dir dinov3/canonical_views
 """
 
 import argparse
@@ -333,7 +333,7 @@ def main():
     parser.add_argument("--cameras", nargs="+", default=[],
                         help="Specific camera folders (default: all)")
     parser.add_argument("--output-dir", type=str,
-                        default="/shared/home/juan.osorio/master/preprocessing/segmentation/segformer_output",
+                        default="preprocessing/segmentation/segformer_output",
                         help="Output directory")
     parser.add_argument("--model", type=str,
                         default="nvidia/segformer-b5-finetuned-ade-640-640",
