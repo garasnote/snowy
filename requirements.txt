@@ -36,6 +36,7 @@ astral
 
 # Training monitoring
 tensorboard
+mlflow
 
 # Anomaly detection (eval_all.py --types with SubspaceAD/PatchCore/EfficientAD;
 # not part of the paper's reported results, still in the eval script)
@@ -55,7 +56,7 @@ mmsegmentation
 plotly
 streamlit
 optuna
-mlflow
+
 timm
 PyQt6
 imageio-ffmpeg

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 Snow segmentation utilities: the deterministic HSV baseline, its
-threshold-tuning helper, and the majority-vote ensemble that combines
-teacher outputs from snow_teachers.py into the snow pseudo-labels used to
-train the snow student models (Methods, "Snow Segmentation").
+threshold-tuning helper, the majority-vote ensemble that combines teacher
+outputs from snow_teachers.py into the snow pseudo-labels used to train the
+snow student models (Methods, "Snow Segmentation"), and a post-processing
+step that clips existing snow masks to a ground mask.
 
-Consolidated from hsv_snow_baseline.py, hsv_eer_threshold.py, and
-ensemble_snow_voting.py.
+Consolidated from hsv_snow_baseline.py, hsv_eer_threshold.py,
+ensemble_snow_voting.py, and clip_snow_to_ground.py.
 
 NOTE: the deterministic baseline reported in the paper is the PCA Blue-Band
 method (Portenier et al.), not this HSV threshold -- that script was never
@@ -19,6 +20,7 @@ Usage:
     python snow_utils.py baseline --data-dir ./data --output-dir ./out
     python snow_utils.py tune-threshold --mask-dir ./out --meteo data/meteo_hourly.csv
     python snow_utils.py ensemble --min-votes 2
+    python snow_utils.py clip-to-ground --methods sam3 yoloe florence2
 """
 
 import argparse
@@ -547,16 +549,133 @@ def run_ensemble(args):
 
 
 # =============================================================================
+# CLIP-TO-GROUND — AND an existing snow mask with a ground mask
+# =============================================================================
+# Post-processes existing snow_teachers.py outputs by ANDing them with
+# ground masks, restricting snow detection to ground regions only. For each
+# source snow directory (e.g. sam3_snow_output), creates a new directory
+# alongside it with suffix `_ground_clipped` containing the same file
+# layout but masked.
+
+CLIP_METHOD_DIRS = {
+    "hsv":       "hsv_snow_output_mobilenet_ft",
+    "sam3":      "sam3_snow_output",
+    "yoloe":     "yoloe_snow_output",
+    "florence2": "florence2_snow_output",
+}
+
+
+def clip_one(args_tuple):
+    """Load snow mask + ground mask, AND them, save to dest."""
+    snow_path, ground_path, dest_path = args_tuple
+
+    if not ground_path.exists():
+        return ("no_ground", snow_path.name)
+
+    try:
+        snow = np.array(Image.open(snow_path).convert("L"))
+        ground = np.array(Image.open(ground_path).convert("L"))
+
+        if ground.shape != snow.shape:
+            ground = np.array(Image.fromarray(ground).resize(
+                (snow.shape[1], snow.shape[0]), Image.NEAREST))
+
+        snow_bool = snow > 127
+        ground_bool = ground > 127
+        clipped = (snow_bool & ground_bool).astype(np.uint8) * 255
+
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(clipped).save(dest_path)
+        return ("ok", snow_path.name)
+    except Exception as e:
+        return ("error", f"{snow_path.name}: {e}")
+
+
+def add_clip_to_ground_subparser(subparsers):
+    p = subparsers.add_parser(
+        "clip-to-ground", help="AND existing snow masks with a ground mask")
+    p.add_argument("--base-dir", type=Path,
+                    default=_REPO_ROOT / "preprocessing" / "segmentation",
+                    help="Base directory with segmentation outputs")
+    p.add_argument("--methods", nargs="+",
+                    default=list(CLIP_METHOD_DIRS.keys()),
+                    choices=list(CLIP_METHOD_DIRS.keys()),
+                    help="Which snow methods to clip")
+    p.add_argument("--ground-source", default="mobilenet_ft",
+                    help="Student model under student_ground_output/")
+    p.add_argument("--workers", type=int, default=8)
+    return p
+
+
+def run_clip_to_ground(args):
+    base = args.base_dir
+    ground_base = base / "student_ground_output" / args.ground_source
+    if not ground_base.exists():
+        print(f"ERROR: ground source not found: {ground_base}")
+        return
+
+    print(f"Ground source: {ground_base}")
+    print(f"Methods:       {args.methods}")
+    print()
+
+    for method in args.methods:
+        src_dir = base / CLIP_METHOD_DIRS[method]
+        if not src_dir.exists():
+            print(f"  SKIP {method}: {src_dir} does not exist")
+            continue
+
+        dest_dir = src_dir.parent / f"{src_dir.name}_ground_clipped"
+        print(f"=== {method}: {src_dir.name} -> {dest_dir.name} ===")
+
+        tasks = []
+        cameras = sorted([d for d in src_dir.iterdir()
+                          if d.is_dir() and re.match(r"C[A-Z]\d+", d.name)])
+        for cam_dir in cameras:
+            for snow_path in cam_dir.glob("*_snow.png"):
+                stem = snow_path.stem.replace("_snow", "")
+                ground_path = ground_base / cam_dir.name / f"{stem}_ground.png"
+                dest_path = dest_dir / cam_dir.name / snow_path.name
+                tasks.append((snow_path, ground_path, dest_path))
+
+        if not tasks:
+            print(f"  No snow masks found in {src_dir}")
+            continue
+
+        print(f"  Processing {len(tasks)} masks with {args.workers} workers...")
+        stats = {"ok": 0, "no_ground": 0, "error": 0}
+        errors = []
+        with ProcessPoolExecutor(max_workers=args.workers) as pool:
+            futures = [pool.submit(clip_one, t) for t in tasks]
+            for future in tqdm(as_completed(futures), total=len(futures),
+                               desc=f"  {method}"):
+                status, info = future.result()
+                stats[status] += 1
+                if status == "error":
+                    errors.append(info)
+
+        print(f"  Done: {stats['ok']} ok, {stats['no_ground']} no ground, "
+              f"{stats['error']} errors")
+        if errors[:3]:
+            for e in errors[:3]:
+                print(f"    ! {e}")
+        print()
+
+    print("All done!")
+
+
+# =============================================================================
 # main
 # =============================================================================
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Snow segmentation utilities: baseline + tune-threshold + ensemble")
+        description="Snow segmentation utilities: baseline + tune-threshold + "
+                     "ensemble + clip-to-ground")
     subparsers = parser.add_subparsers(dest="command", required=True)
     add_baseline_subparser(subparsers)
     add_tune_threshold_subparser(subparsers)
     add_ensemble_subparser(subparsers)
+    add_clip_to_ground_subparser(subparsers)
     args = parser.parse_args()
 
     if args.command == "baseline":
@@ -565,6 +684,8 @@ def main():
         run_tune_threshold(args)
     elif args.command == "ensemble":
         run_ensemble(args)
+    elif args.command == "clip-to-ground":
+        run_clip_to_ground(args)
 
 
 if __name__ == "__main__":
