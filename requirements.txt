@@ -1,0 +1,49 @@
+# Base list is the real requirements.txt from the FRIDA cluster environment
+# (master/requirements.txt), pasted by the author 2026-09-22. Five packages
+# marked "(added)" below were missing from that file but are genuinely
+# imported by code in this repo (confirmed by scanning every `import`
+# statement here) - either an oversight in the original file, or installed
+# some other way on the cluster. Torch/torchvision/torchaudio are
+# deliberately not listed here: setup_environment.sbatch installs them
+# separately, pinned to torch==2.7.0 from the cu126 index (see README).
+#
+# Packages that were in the original cluster file but that nothing in this
+# repo imports (scikit-image, pyarrow, seaborn, plotly, mmengine, mmcv,
+# mmsegmentation, streamlit) are omitted - they belong to the upstream
+# teacher/pseudo-label generation pipeline (e.g. DeepLabV3+ via OpenMMLab),
+# which isn't part of this release. Add them back if you need to reproduce
+# that step too.
+
+numpy
+opencv-python
+pandas
+matplotlib
+lightning>=2.1.0
+torchmetrics>=1.2.0
+scipy
+Pillow
+tqdm
+scikit-learn
+albumentations
+shap
+
+# DINOv3 dependencies
+transformers>=4.56.0
+accelerate
+
+# Sunrise/sunset computation
+astral
+
+# Training monitoring
+tensorboard
+
+# Anomaly detection (eval_all.py --types with SubspaceAD/PatchCore/EfficientAD;
+# not part of the paper's reported results, still in the eval script)
+anomalib
+
+# --- added: imported by this repo but missing from the original cluster file ---
+optuna              # models/multi_head/hp_search_multihead.py, preprocessing/qa/hp_search_qa_cnn.py
+mlflow               # models/multi_head/train_multihead.py, hp_search_multihead.py
+timm                 # models/student_ground/models.py
+PyQt6                # tools/viewer/app.py (only needed for the viewer)
+imageio-ffmpeg       # models/temporal_snow/animate_periods.py

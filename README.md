@@ -55,10 +55,14 @@ for reference but are not necessary outside that HPC environment.
 
 ## Requirements
 
-PyTorch, PyTorch Lightning, `transformers` (HuggingFace), `torchmetrics`,
-`scikit-learn`, `torchvision`, `mlflow` (optional, for experiment tracking),
-`PyQt` (for the viewer only). No `requirements.txt` is pinned here yet — see
-individual script headers for the specific libraries each depends on.
+`pip install -r requirements.txt`, then separately install PyTorch (pinned to
+`torch==2.7.0` from the cu126 index — see `scripts/setup_environment.sbatch`
+for the exact command and CUDA 12.6 context this was developed against).
+`requirements.txt` is the real cluster environment file, trimmed to drop a
+few packages this particular repo doesn't need (see comments in the file for
+what and why) and with five genuinely-used packages added back in that were
+missing from the original. `mlflow` is optional (experiment tracking) and
+`PyQt6` is only needed for `tools/viewer/app.py`.
 
 ## Reproducing results
 
