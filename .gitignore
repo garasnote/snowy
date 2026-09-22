@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.ckpt
+*.pt
+*.pth
+*.pkl
+*.joblib
+*.csv
+*.png
+*.jpg
+*.jpeg
+!preprocessing/segmentation/camera_valid_regions/*.png
+output/
+checkpoints/
+cache/
