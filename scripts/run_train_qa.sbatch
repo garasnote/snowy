@@ -36,21 +36,21 @@ srun \
     echo 'Starting QA training at \$(date)'
     echo ''
 
-    python ${MASTER_DIR}/preprocessing/qa/train_qa.py \
+    python ${MASTER_DIR}/qa/train_qa.py \
         --ann-dir ${MASTER_DIR}/data/annotations \
         --img-dir ${MASTER_DIR}/data/balanced_snow \
         --meteo ${MASTER_DIR}/data/meteo_hourly.csv \
-        --output-dir ${MASTER_DIR}/preprocessing/qa/checkpoints \
+        --output-dir ${MASTER_DIR}/qa/checkpoints \
         --n-estimators 300 \
         --max-depth 5
 
     echo ''
     echo 'Verifying output...'
-    ls -la ${MASTER_DIR}/preprocessing/qa/checkpoints/qa_gradboost.pkl
+    ls -la ${MASTER_DIR}/qa/checkpoints/qa_gradboost.pkl
 
     echo ''
     echo '=== Plotting misclassified examples ==='
-    python ${MASTER_DIR}/preprocessing/qa/plot_mistakes.py
+    python ${MASTER_DIR}/qa/plot_mistakes.py
 
     echo ''
     echo 'QA training completed at \$(date)'

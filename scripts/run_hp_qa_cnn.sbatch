@@ -47,11 +47,11 @@ srun \
     nvidia-smi
     echo ''
 
-    python ${MASTER_DIR}/preprocessing/qa/hp_search_qa_cnn.py \
+    python ${MASTER_DIR}/qa/hp_search_qa_cnn.py \
         --n-trials ${N_TRIALS} \
         --img-dir ${MASTER_DIR}/data/balanced_snow \
-        --output-dir ${MASTER_DIR}/preprocessing/qa/checkpoints \
-        --db ${MASTER_DIR}/preprocessing/qa/optuna_qa_cnn.db
+        --output-dir ${MASTER_DIR}/qa/checkpoints \
+        --db ${MASTER_DIR}/qa/optuna_qa_cnn.db
 
     echo ''
     echo 'HP search completed at \$(date)'

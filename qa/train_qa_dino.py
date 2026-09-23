@@ -31,7 +31,7 @@ from sklearn.metrics import roc_auc_score, f1_score
 import pandas as pd
 
 _HERE = Path(__file__).resolve().parent
-_ROOT = _HERE.parent.parent
+_ROOT = _HERE.parent
 
 sys.path.insert(0, str(_ROOT / "models"))
 
@@ -186,7 +186,7 @@ def main():
     args = parser.parse_args()
 
     # Load QA CSV (same as TinyQACNN)
-    feat_csv = _ROOT / "preprocessing" / "qa" / "checkpoints" / "qa_features.csv"
+    feat_csv = _HERE / "checkpoints" / "qa_features.csv"
     if not feat_csv.exists():
         feat_csv = _ROOT / "analysis" / "image_features.csv"
     df = pd.read_csv(feat_csv)

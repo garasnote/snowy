@@ -43,11 +43,11 @@ srun \
     echo 'Starting QA HP search at \$(date)'
     echo ''
 
-    python ${MASTER_DIR}/preprocessing/qa/train_qa.py \
+    python ${MASTER_DIR}/qa/train_qa.py \
         --ann-dir ${MASTER_DIR}/data/annotations \
         --img-dir ${MASTER_DIR}/data\
         --meteo ${MASTER_DIR}/data/meteo_hourly.csv \
-        --output-dir ${MASTER_DIR}/preprocessing/qa/checkpoints \
+        --output-dir ${MASTER_DIR}/qa/checkpoints \
         --hp-search \
         --hp-iter ${HP_ITER}
 

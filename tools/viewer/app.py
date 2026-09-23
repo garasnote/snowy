@@ -499,7 +499,7 @@ def _load_qa_model(model_path):
         sys_path_parent = str(model_path.resolve().parent.parent.parent)
         if sys_path_parent not in sys.path:
             sys.path.insert(0, sys_path_parent)
-        from preprocessing.qa.train_qa_cnn import TinyQACNN
+        from qa.train_qa_cnn import TinyQACNN
         ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
         model = TinyQACNN(channels=ckpt["channels"])
         model.load_state_dict(ckpt["state_dict"])

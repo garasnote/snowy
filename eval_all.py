@@ -1918,13 +1918,13 @@ def eval_qa(args):
     from sklearn.metrics import roc_auc_score, f1_score
     from sklearn.model_selection import StratifiedKFold
 
-    _QA_DIR = Path("preprocessing/qa/checkpoints")
+    _QA_DIR = Path("qa/checkpoints")
     _IMG_DIR = Path("data/balanced_snow")
 
     # ── Load feature CSV (pre-extracted) ─────────────────────────────────
     feat_csv = _QA_DIR / "qa_features.csv"
     if not feat_csv.exists():
-        print(f"ERROR: {feat_csv} not found. Run preprocessing/qa/train_qa.py first.")
+        print(f"ERROR: {feat_csv} not found. Run qa/train_qa.py first.")
         return
     df = pd.read_csv(feat_csv)
     labels = df["label"].values
@@ -2021,7 +2021,7 @@ def eval_qa(args):
     cnn_ckpt = _QA_DIR / "qa_cnn.ckpt"
     if cnn_ckpt.exists() and "cnn" in [t.lower() for t in args.types]:
         print("\n--- TinyQACNN ---")
-        sys.path.insert(0, str(Path("preprocessing/qa")))
+        sys.path.insert(0, str(Path("qa")))
         from train_qa_cnn import QADataset
 
         ckpt = torch.load(cnn_ckpt, map_location="cpu", weights_only=False)

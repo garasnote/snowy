@@ -36,7 +36,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-output_dir = '${MASTER_DIR}/preprocessing/qa/checkpoints'
+output_dir = '${MASTER_DIR}/qa/checkpoints'
 
 # Load model
 with open(f'{output_dir}/qa_gradboost.pkl', 'rb') as f:

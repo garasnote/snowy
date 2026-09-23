@@ -6,7 +6,7 @@ Usage as script:
     python predict_qa.py --img-dir /path/to/images --threshold 0.5
 
 Usage as library:
-    from preprocessing.qa.predict_qa import load_qa_model, classify_images
+    from qa.predict_qa import load_qa_model, classify_images
     clf, feature_cols = load_qa_model("path/to/qa_gradboost.pkl")
     results = classify_images(clf, feature_cols, img_dir, meteo_path)
     # results: dict of {(camera, stem): prob_usable}
@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 
 _HERE = Path(__file__).resolve().parent
-_ROOT = _HERE.parent.parent
+_ROOT = _HERE.parent
 
 from train_qa import extract_image_features, parse_timestamp
 

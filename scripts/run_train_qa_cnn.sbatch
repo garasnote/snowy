@@ -44,25 +44,25 @@ srun \
     echo ''
 
     echo '=== Step 1: regenerate qa_features.csv with label3 ==='
-    python ${MASTER_DIR}/preprocessing/qa/train_qa.py \
+    python ${MASTER_DIR}/qa/train_qa.py \
         --ann-dir   ${MASTER_DIR}/data/annotations \
         --img-dir   ${MASTER_DIR}/data/balanced_snow \
         --meteo     ${MASTER_DIR}/data/meteo_hourly.csv \
-        --output-dir ${MASTER_DIR}/preprocessing/qa/checkpoints
+        --output-dir ${MASTER_DIR}/qa/checkpoints
 
     echo ''
     echo '=== Step 2: train 3-class CNN ==='
-    python ${MASTER_DIR}/preprocessing/qa/train_qa_cnn.py \
-        --features-csv ${MASTER_DIR}/preprocessing/qa/checkpoints/qa_features.csv \
+    python ${MASTER_DIR}/qa/train_qa_cnn.py \
+        --features-csv ${MASTER_DIR}/qa/checkpoints/qa_features.csv \
         --img-dir      ${MASTER_DIR}/data/balanced_snow \
-        --output-dir   ${MASTER_DIR}/preprocessing/qa/checkpoints \
+        --output-dir   ${MASTER_DIR}/qa/checkpoints \
         --epochs ${EPOCHS} \
         --batch-size ${BATCH_SIZE} \
         --lr ${LR}
 
     echo ''
-    ls -lh ${MASTER_DIR}/preprocessing/qa/checkpoints/qa_cnn.pt \
-            ${MASTER_DIR}/preprocessing/qa/checkpoints/qa_cnn.ckpt
+    ls -lh ${MASTER_DIR}/qa/checkpoints/qa_cnn.pt \
+            ${MASTER_DIR}/qa/checkpoints/qa_cnn.ckpt
 
     echo ''
     echo 'Finished at \$(date)'

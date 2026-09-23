@@ -30,7 +30,7 @@ from sklearn.metrics import (
 )
 
 _HERE = Path(__file__).resolve().parent
-_ROOT = _HERE.parent.parent
+_ROOT = _HERE.parent
 
 
 # ── Annotation parsing ────────────────────────────────────────────────────

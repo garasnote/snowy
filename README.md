@@ -11,6 +11,18 @@ independent ARSO meteorological station snow-presence records.
 - `eval_all.py` — unified evaluation script for all ground/snow/QA methods
   (teachers, ensembles, students, baselines), in-distribution and OOD.
 - `eval_ood_per_camera.py` — per-camera OOD breakdown (ground/snow/QA).
+- `qa/` — the image-quality gate (Sec. "QA gate" in the paper, Table `tab:qa`):
+  filters degraded/unusable frames before segmentation runs. This is a
+  reported, evaluated pipeline stage, not preprocessing hygiene.
+  - `train_qa_cnn.py` — TinyQACNN, the QA gate actually reported in the
+    paper (3-class: clean/snow/non-usable).
+  - `train_qa.py` — HistGradientBoosting classifier on handcrafted features;
+    one of the comparison baselines TinyQACNN is measured against.
+  - `train_qa_dino.py` — DINOv2/DINOv3-backbone comparison baseline.
+  - `hp_search_qa_cnn.py` — Optuna hyperparameter search for TinyQACNN.
+  - `predict_qa.py` — inference wrapper for the GradBoost model; imported
+    as a library by `analysis/build_features.py`'s `timeseries` subcommand.
+  - `plot_mistakes.py` — plots GradBoost's misclassified frames from CV.
 - `segmentation/` — zero-shot teacher / pseudo-label generation, the pseudo-
   labels the students in `models/student_ground/` and `models/student_snow/`
   are distilled from:
@@ -57,8 +69,6 @@ independent ARSO meteorological station snow-presence records.
     `snow_patchiness.py` / `crop_evaluation.py` / `error_analysis.py`
     (orphaned exploratory scripts — zero downstream consumers, output
     never referenced in the manuscript).
-- `preprocessing/qa/` — QA gate training (TinyQACNN, gradient-boosted trees)
-  and inference.
 - `preprocessing/segmentation/camera_valid_regions/` — hand-drawn per-camera
   masks excluding static obstructions (parking lots, distant landscape) from
   ground-truth computation.
@@ -106,7 +116,7 @@ missing from the original. `mlflow` is optional (experiment tracking) and
 
 ## Reproducing results
 
-Each `models/*/train.py` and `preprocessing/qa/train_*.py` script is
+Each `models/*/train.py` and `qa/train_*.py` script is
 self-contained and documents its own CLI arguments in its module docstring.
 `scripts/*.sbatch` show the exact invocations (variants, hyperparameters,
 checkpoint paths) used to produce the results reported in the paper.
