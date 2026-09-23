@@ -110,7 +110,7 @@ def parse_qa_label3(task):
 def eval_qa_per_camera(device):
     import torchvision.transforms.v2 as T
 
-    cnn_ckpt = _ROOT / "preprocessing" / "qa" / "checkpoints" / "qa_cnn.pt"
+    cnn_ckpt = _ROOT / "qa" / "checkpoints" / "qa_cnn.pt"
     model = torch.jit.load(str(cnn_ckpt), map_location=device).eval()
     transform = T.Compose([
         T.Resize((128, 128)),

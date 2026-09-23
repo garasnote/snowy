@@ -42,8 +42,8 @@ TS_GROUND_MASK_DIR = TS_OUTPUT_BASE / "student_ground_output" / "mobilenet_ft"
 TS_VALID_REGION_DIR = TS_OUTPUT_BASE / "camera_valid_regions"
 TS_METEO_HOURLY = MASTER / "data" / "meteo_hourly.csv"
 TS_METEO_DAILY = MASTER / "data" / "meteo_daily.csv"
-TS_QA_CNN_PATH = MASTER / "preprocessing" / "qa" / "checkpoints" / "qa_cnn.pt"
-TS_QA_GB_PATH = MASTER / "preprocessing" / "qa" / "checkpoints" / "qa_gradboost.pkl"
+TS_QA_CNN_PATH = MASTER / "qa" / "checkpoints" / "qa_cnn.pt"
+TS_QA_GB_PATH = MASTER / "qa" / "checkpoints" / "qa_gradboost.pkl"
 
 TS_METHOD_DIRS = {
     "student": TS_OUTPUT_BASE / "student_snow_output" / "mobilenet_gt",
@@ -384,7 +384,7 @@ def run_timeseries(args):
               f"({100*n_rejected/len(df):.1f}%)")
     elif TS_QA_GB_PATH.exists():
         import sys
-        qa_dir = str(MASTER / "preprocessing" / "qa")
+        qa_dir = str(MASTER / "qa")
         if qa_dir not in sys.path:
             sys.path.insert(0, qa_dir)
         from predict_qa import load_qa_model, classify_images

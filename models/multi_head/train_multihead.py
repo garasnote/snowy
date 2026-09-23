@@ -47,7 +47,7 @@ _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parent.parent
 _ANN  = _ROOT / "data" / "annotations"
 _DATA = _ROOT / "data"
-_QA   = _ROOT / "preprocessing" / "qa"
+_QA   = _ROOT / "qa"
 _SEG  = _ROOT / "preprocessing" / "segmentation"
 
 sys.path.insert(0, str(_ROOT))

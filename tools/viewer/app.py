@@ -602,8 +602,8 @@ class QATab(QWidget):
         qa_path = None
         for name in ("qa_cnn.pt", "qa_gradboost_lite.pkl", "qa_gradboost.pkl"):
             for base in (
-                self.viewer.models_dir.parent / "preprocessing" / "qa" / "checkpoints",
-                Path(__file__).resolve().parent.parent.parent / "preprocessing" / "qa" / "checkpoints",
+                self.viewer.models_dir.parent / "qa" / "checkpoints",
+                Path(__file__).resolve().parent.parent.parent / "qa" / "checkpoints",
                 self.viewer.models_dir / "best",
             ):
                 candidate = base / name

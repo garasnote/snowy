@@ -19,7 +19,6 @@ independent ARSO meteorological station snow-presence records.
   - `train_qa.py` — HistGradientBoosting classifier on handcrafted features;
     one of the comparison baselines TinyQACNN is measured against.
   - `train_qa_dino.py` — DINOv2/DINOv3-backbone comparison baseline.
-  - `hp_search_qa_cnn.py` — Optuna hyperparameter search for TinyQACNN.
   - `predict_qa.py` — inference wrapper for the GradBoost model; imported
     as a library by `analysis/build_features.py`'s `timeseries` subcommand.
   - `plot_mistakes.py` — plots GradBoost's misclassified frames from CV.
