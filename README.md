@@ -121,8 +121,8 @@ independent ARSO meteorological station snow-presence records.
   request to the corresponding author.
 - **Manual annotations**: Label Studio exports (ground/snow brush masks, QA
   taxonomy tags). These are our own work product, not ARSO's, and are shared
-  freely, no request needed. A persistent link (Zenodo or similar) will be
-  added here once deposited. `[TODO: deposit + link]`
+  freely, no request needed. Deposited on Zenodo:
+  https://doi.org/10.5281/zenodo.22926962
 
 ## Configuration
 
