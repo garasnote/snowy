@@ -333,7 +333,11 @@ def load_qa_records():
 def load_ground_records():
     from student_ground.dataset import decode_ls_rle
     records = []
-    for fname in ["ground_annotations.json", "san.json", "heroku.json"]:
+    # san.json / heroku.json are NOT ground data — they're 100%
+    # brushlabels=["Snow Mano"] (snow annotations for CF00001/CM00009/
+    # CM00014), previously grouped here by mistake. Including them fed
+    # snow masks into ground GT-finetune training for those 3 cameras.
+    for fname in ["ground_annotations.json"]:
         p = _ANN / fname
         if not p.exists():
             continue
@@ -350,6 +354,13 @@ def load_ground_records():
             for ann in t.get("annotations", []):
                 for r in ann.get("result", []):
                     if r.get("type") != "brushlabels" or "rle" not in r.get("value", {}):
+                        continue
+                    # "Ground Mano" is the current tag; ground_annotations.json
+                    # predates that taxonomy rename and says plain "Ground" —
+                    # same label, older spelling (see eval_all.py's
+                    # load_gt_masks for the full note).
+                    bl = r.get("value", {}).get("brushlabels", [])
+                    if "Ground" not in bl and "Ground Mano" not in bl:
                         continue
                     w = r.get("original_width", 1296)
                     h = r.get("original_height", 960)

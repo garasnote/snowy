@@ -159,10 +159,21 @@ def load_gt_masks(gt_json_path, cameras, label_class=None):
                 if "No Snow" in flat:
                     is_no_snow = True
 
-            # Brushlabels: filter by label_class when specified
+            # Brushlabels: filter by label_class when specified.
+            # "Ground Mano" is the current tag (all 4 OOD-cohort files:
+            # 54/67/71/115.json), but ground_annotations.json predates that
+            # taxonomy rename and still says plain "Ground" — same label,
+            # older spelling. Snow has no such split; every file
+            # (old and new) already says "Snow Mano" consistently. Without
+            # this, label_class="Ground Mano" silently matched zero masks
+            # in ground_annotations.json (267 ID-camera ground masks
+            # dropped with no error).
             if result.get("type") == "brushlabels" and "rle" in v:
                 bl = v.get("brushlabels", [])
-                if label_class is None or label_class in bl:
+                match = label_class is None or label_class in bl or (
+                    label_class == "Ground Mano" and "Ground" in bl
+                )
+                if match:
                     merged |= decode_ls_rle(v["rle"], w, h)
                     has_brush = True
 

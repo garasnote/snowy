@@ -405,7 +405,13 @@ BR_SNOW_ANN_FILES = {
     "CM00108": _ANN / "108.json",
     "CM00112": _ANN / "112.json",
 }
-BR_GROUND_ANN_FILES = [_ANN / "ground_annotations.json", _ANN / "san.json", _ANN / "heroku.json"]
+# san.json / heroku.json are NOT ground data despite living alongside
+# ground_annotations.json — they're 100% brushlabels=["Snow Mano"] (snow
+# annotations for CF00001/CM00009/CM00014), grouped here by mistake in an
+# earlier version of this list. Including them fed snow masks into the
+# "ground truth" pool for those 3 cameras' grid_best_ground/grid_worst_ground
+# figures. See br_load_ground_gt's label filter for the same taxonomy note.
+BR_GROUND_ANN_FILES = [_ANN / "ground_annotations.json"]
 
 BR_GROUND_CKPTS = {
     "mobilenet":  sorted((BR_CKPT_GROUND).glob("mobilenet_majority_3_*/best-*.ckpt")),
@@ -469,6 +475,13 @@ def br_load_ground_gt(cameras):
             for ann in task.get("annotations",[]):
                 for r in ann.get("result",[]):
                     if r.get("type") != "brushlabels" or "rle" not in r.get("value",{}):
+                        continue
+                    # "Ground Mano" is the current tag; ground_annotations.json
+                    # predates that taxonomy rename and says plain "Ground" —
+                    # same label, older spelling (see eval_all.py's
+                    # load_gt_masks for the full note).
+                    bl = r.get("value", {}).get("brushlabels", [])
+                    if "Ground" not in bl and "Ground Mano" not in bl:
                         continue
                     w = r.get("original_width", 1296)
                     h = r.get("original_height", 960)
