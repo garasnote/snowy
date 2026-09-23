@@ -17,11 +17,14 @@ independent ARSO meteorological station snow-presence records.
   - `train_qa_cnn.py` — TinyQACNN, the QA gate actually reported in the
     paper (3-class: clean/snow/non-usable).
   - `train_qa.py` — HistGradientBoosting classifier on handcrafted features;
-    one of the comparison baselines TinyQACNN is measured against.
+    one of the comparison baselines TinyQACNN is measured against. Also
+    produces `qa_features.csv` (with the `label3` column) that
+    `train_qa_cnn.py` and `train_qa_dino.py` train from. `--plot-mistakes`
+    plots its CV false positives/negatives (was a separate
+    `plot_mistakes.py` script; folded in since nothing else used it).
   - `train_qa_dino.py` — DINOv2/DINOv3-backbone comparison baseline.
   - `predict_qa.py` — inference wrapper for the GradBoost model; imported
     as a library by `analysis/build_features.py`'s `timeseries` subcommand.
-  - `plot_mistakes.py` — plots GradBoost's misclassified frames from CV.
 - `segmentation/` — zero-shot teacher / pseudo-label generation, the pseudo-
   labels the students in `models/student_ground/` and `models/student_snow/`
   are distilled from:

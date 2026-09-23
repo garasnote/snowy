@@ -42,15 +42,12 @@ srun \
         --meteo ${MASTER_DIR}/data/meteo_hourly.csv \
         --output-dir ${MASTER_DIR}/qa/checkpoints \
         --n-estimators 300 \
-        --max-depth 5
+        --max-depth 5 \
+        --plot-mistakes
 
     echo ''
     echo 'Verifying output...'
     ls -la ${MASTER_DIR}/qa/checkpoints/qa_gradboost.pkl
-
-    echo ''
-    echo '=== Plotting misclassified examples ==='
-    python ${MASTER_DIR}/qa/plot_mistakes.py
 
     echo ''
     echo 'QA training completed at \$(date)'
