@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""SHAP analysis on bi-directional GRU temporal smoother."""
+"""SHAP analysis on bi-directional GRU temporal smoother.
+
+Moved from analysis/shap_gru.py — lives here because it imports the
+smoother model/dataset code directly, not because it needs anything
+else in analysis/.
+"""
 import sys, math
 import numpy as np
 import pandas as pd
@@ -8,13 +13,13 @@ import matplotlib
 matplotlib.rcParams["font.family"] = "DejaVu Sans"
 from pathlib import Path
 
-_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(_ROOT))
+_HERE = Path(__file__).resolve().parent
+_ROOT = _HERE.parent.parent
 sys.path.insert(0, str(_ROOT / "models"))
 
-CKPT = "models/temporal_snow/checkpoints/smoother_gru_h128_l2_bi_k7_seq96_20260623_175446/best-epoch=114-val_mae=0.0037.ckpt"
-CSV  = "analysis/snow_timeseries.csv"
-OUT  = "analysis/shap_gru"
+CKPT = str(_HERE / "checkpoints/smoother_gru_h128_l2_bi_k7_seq96_20260623_175446/best-epoch=114-val_mae=0.0037.ckpt")
+CSV  = str(_ROOT / "analysis/snow_timeseries.csv")
+OUT  = str(_ROOT / "analysis/shap_gru")
 Path(OUT).mkdir(exist_ok=True)
 
 from temporal_snow.train_smoother import TemporalSmootherModule

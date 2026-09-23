@@ -41,7 +41,7 @@ srun \
     nvidia-smi
     echo ''
 
-    python ${MASTER_DIR}/analysis/build_snow_timeseries.py \
+    python ${MASTER_DIR}/analysis/build_features.py timeseries \
         --data-dir ${MASTER_DIR}/data \
         --workers 8 \
         --qa-threshold 0.5

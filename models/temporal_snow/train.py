@@ -2,7 +2,8 @@
 """
 Train GRU temporal snow refinement model.
 
-Uses the timeseries CSV from build_snow_timeseries.py as input.
+Uses the timeseries CSV from analysis/build_features.py's "timeseries"
+subcommand as input.
 Camera-based train/val split. Outputs per-timestep snow probability.
 
 Usage:
@@ -227,7 +228,8 @@ def main():
 
     csv_path = Path(args.csv)
     if not csv_path.exists():
-        print(f"ERROR: {csv_path} not found. Run build_snow_timeseries.py first.")
+        print(f"ERROR: {csv_path} not found. Run "
+              f"'python analysis/build_features.py timeseries' first.")
         sys.exit(1)
 
     print("=" * 60)

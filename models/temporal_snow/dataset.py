@@ -1,8 +1,9 @@
 """
 Temporal snow dataset — sliding windows over per-camera time series.
 
-Loads the timeseries CSV produced by build_snow_timeseries.py and creates
-windowed sequences of features for GRU-based temporal refinement.
+Loads the timeseries CSV produced by analysis/build_features.py's
+"timeseries" subcommand and creates windowed sequences of features for
+GRU-based temporal refinement.
 
 Features per timestep:
   - student_snow_pct (from student snow model)
@@ -348,7 +349,8 @@ def build_dataloaders(
     # Check if image features are available in the CSV
     has_img_feats = all(c in df.columns for c in IMAGE_FEAT_COLS)
     if use_image_features and not has_img_feats:
-        print("  [WARN] Image features not in CSV — run extract_image_features.py + rebuild timeseries")
+        print("  [WARN] Image features not in CSV — run "
+              "'python analysis/build_features.py image-features' + rebuild timeseries")
         use_image_features = False
 
     feature_cols = build_feature_columns(snow_pct_cols, use_image_features=use_image_features)

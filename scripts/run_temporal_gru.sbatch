@@ -104,13 +104,13 @@ srun \
     # Step 1: Extract image features (CPU, ~10ms/image)
     if [ ${SKIP_FEATURES} -eq 0 ]; then
         echo '=== Step 1: Extract image features ==='
-        python ${MASTER_DIR}/analysis/extract_image_features.py \
+        python ${MASTER_DIR}/analysis/build_features.py image-features \
             --data-dir ${DATA_DIR} \
             --workers ${WORKERS}
         echo ''
 
         echo '=== Step 2: Rebuild timeseries CSV ==='
-        python ${MASTER_DIR}/analysis/build_snow_timeseries.py \
+        python ${MASTER_DIR}/analysis/build_features.py timeseries \
             --data-dir ${DATA_DIR} \
             --workers ${WORKERS} \
             --skip-qa

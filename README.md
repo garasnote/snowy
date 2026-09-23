@@ -39,8 +39,24 @@ independent ARSO meteorological station snow-presence records.
   bi-directional), training, inference, and visualization scripts.
 - `models/multi_head/` — DINOv3MultiHead: single-backbone multi-task model
   (QA + ground + snow), two-phase pseudo-label pretraining then GT fine-tuning.
-- `analysis/` — timeseries construction, meteorological station validation,
-  SHAP analysis, Kalman filter baseline, error analysis.
+- `analysis/`:
+  - `build_features.py` — `timeseries` and `image-features` subcommands.
+    Not analysis, just the ETL that produces `snow_timeseries.csv` and
+    `image_features.csv`, the inputs everything else here (and the GRU
+    smoother, and the multi-head QA fallback) reads.
+  - `temporal_diagnostics.py` — `meteo-validate` (the paper's headline ARSO
+    F1 number), `melt-patterns` (transition/melt-sequence analysis),
+    `grid` (qualitative snow-coverage comparison grids), `daily-agg-check`
+    (sanity check for meteo-validate's daily aggregation). Was 4 separate
+    scripts (`validate_meteo.py`, `temporal_analysis.py`,
+    `make_snow_grid.py`, `check_daily_agg.py`).
+  - SHAP analysis on the GRU smoother now lives at
+    `models/temporal_snow/shap_gru.py` (moved out of `analysis/`, since it
+    only ever imported the smoother model/dataset code).
+  - Dropped: `kalman_baseline.py` (not part of the paper), and
+    `snow_patchiness.py` / `crop_evaluation.py` / `error_analysis.py`
+    (orphaned exploratory scripts — zero downstream consumers, output
+    never referenced in the manuscript).
 - `preprocessing/qa/` — QA gate training (TinyQACNN, gradient-boosted trees)
   and inference.
 - `preprocessing/segmentation/camera_valid_regions/` — hand-drawn per-camera
