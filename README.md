@@ -10,7 +10,13 @@ independent ARSO meteorological station snow-presence records.
 
 - `eval_all.py` — unified evaluation script for all ground/snow/QA methods
   (teachers, ensembles, students, baselines), in-distribution and OOD.
-- `eval_ood_per_camera.py` — per-camera OOD breakdown (ground/snow/QA).
+  `--task ood-per-camera` (was a separate `eval_ood_per_camera.py`, folded
+  in since it already imported straight from this file) gives the true
+  per-camera OOD breakdown — ground IoU, snow IoU, QA AUROC/F1 for each of
+  the 4 OOD cameras individually, not pooled into one n=495 block like
+  `--task ground/snow --types ood`. Backs the paper's claim that CM00067
+  is consistently the hardest camera in the cohort (Table
+  `tab:ood-per-camera`).
 - `qa/` — the image-quality gate (Sec. "QA gate" in the paper, Table `tab:qa`):
   filters degraded/unusable frames before segmentation runs. This is a
   reported, evaluated pipeline stage, not preprocessing hygiene.
