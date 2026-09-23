@@ -50,7 +50,28 @@ independent ARSO meteorological station snow-presence records.
   MobileNetV3 / EfficientNet-B0 / DINOv2 / DINOv3 / ConvNeXt / ViT-LoRA
   backbones).
 - `models/temporal_snow/` — GRU/LSTM temporal smoother (uni- and
-  bi-directional), training, inference, and visualization scripts.
+  bi-directional):
+  - `dataset.py`, `model.py`, `train_smoother.py`, `animate_periods.py` —
+    library modules, imported by name throughout the repo (`eval_all.py`,
+    `analysis/temporal_diagnostics.py`, `tools/viewer/app.py`,
+    `tools/make_smoother_video.py`, and siblings in this directory).
+  - `train.py` — trains the smoother itself.
+  - `gru_ood_snow_freq.py` — GRU-smoothed snow frequency for a camera set
+    (defaults to the 4 OOD cameras; matches Table `tab:cameras`'
+    methodology).
+  - `visualize_smoother.py` — `calendar`/`timeline`/`timelapse`
+    subcommands (was 3 separate scripts: `calendar_heatmap.py`,
+    `plot_full_timeline.py`, `timelapse.py`).
+  - `figures.py` — one-off manuscript figure generators:
+    `ground-comparison`/`teacher-comparison`/`best-results`/
+    `smoother-week`/`shap` subcommands (was 5 separate scripts, including
+    `shap_gru.py` which had moved here from `analysis/` in an earlier
+    pass). `best-results` is the actual generator behind the paper's
+    `grid_best_ground`/`grid_worst_ground`/`grid_best_snow`/
+    `grid_worst_snow` appendix figures.
+  - Dropped: `plot_ood_difficulty.py` (hardcoded the old, removed OOD
+    trio — CM00006/CM00024/CM00068 — zero references, zero mentions in
+    the manuscript).
 - `models/multi_head/` — DINOv3MultiHead: single-backbone multi-task model
   (QA + ground + snow), two-phase pseudo-label pretraining then GT fine-tuning.
 - `analysis/`:
@@ -65,8 +86,9 @@ independent ARSO meteorological station snow-presence records.
     scripts (`validate_meteo.py`, `temporal_analysis.py`,
     `make_snow_grid.py`, `check_daily_agg.py`).
   - SHAP analysis on the GRU smoother now lives at
-    `models/temporal_snow/shap_gru.py` (moved out of `analysis/`, since it
-    only ever imported the smoother model/dataset code).
+    `models/temporal_snow/figures.py`'s `shap` subcommand (moved out of
+    `analysis/`, since it only ever imported the smoother model/dataset
+    code).
   - Dropped: `kalman_baseline.py` (not part of the paper), and
     `snow_patchiness.py` / `crop_evaluation.py` / `error_analysis.py`
     (orphaned exploratory scripts — zero downstream consumers, output

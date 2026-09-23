@@ -18,6 +18,6 @@ srun \
     set -e
     pip install --break-system-packages --quiet shap 2>/dev/null || true
     echo 'SHAP analysis started at \$(date)'
-    python models/temporal_snow/shap_gru.py
+    python models/temporal_snow/figures.py shap
     echo 'SHAP analysis finished at \$(date)'
   "

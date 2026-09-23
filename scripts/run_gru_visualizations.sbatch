@@ -59,7 +59,7 @@ srun \
     echo ''
 
     echo '=== Calendar heatmaps ==='
-    python ${MASTER_DIR}/models/temporal_snow/calendar_heatmap.py \
+    python ${MASTER_DIR}/models/temporal_snow/visualize_smoother.py calendar \
         --checkpoint ${CKPT} \
         --csv ${CSV} \
         --seq-len ${SEQ_LEN} \
@@ -67,7 +67,7 @@ srun \
     echo ''
 
     echo '=== Full station timelines ==='
-    python ${MASTER_DIR}/models/temporal_snow/plot_full_timeline.py \
+    python ${MASTER_DIR}/models/temporal_snow/visualize_smoother.py timeline \
         --checkpoint ${CKPT} \
         --csv ${CSV} \
         --seq-len ${SEQ_LEN} \
@@ -76,7 +76,7 @@ srun \
     echo ''
 
     echo '=== Full camera timelapses ==='
-    python ${MASTER_DIR}/models/temporal_snow/timelapse.py \
+    python ${MASTER_DIR}/models/temporal_snow/visualize_smoother.py timelapse \
         --checkpoint ${CKPT} \
         --csv ${CSV} \
         --img-dir ${IMG_DIR} \
