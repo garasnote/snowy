@@ -80,6 +80,14 @@ independent ARSO meteorological station snow-presence records.
     the manuscript).
 - `models/multi_head/` — DINOv3MultiHead: single-backbone multi-task model
   (QA + ground + snow), two-phase pseudo-label pretraining then GT fine-tuning.
+- `models/fusion_cnn/` — FusionCNN: shallow 3-layer conv net that learns a
+  per-pixel weighting over the `segmentation/` teacher masks (replaces the
+  hand-crafted IoU-weighted ensemble in `segmentation/ground_utils.py` /
+  `snow_utils.py`), trained on GT-annotated images only. `inference_fusion.py`
+  runs the trained model over all images to produce
+  `preprocessing/segmentation/fusion_{ground,snow}_output/`, the pseudo-label
+  source `models/multi_head/train_multihead.py --pseudo-snow` defaults to for
+  Multihead's Phase 1 pretraining.
 - `analysis/`:
   - `build_features.py` — `timeseries` and `image-features` subcommands.
     Not analysis, just the ETL that produces `snow_timeseries.csv` and
@@ -99,9 +107,17 @@ independent ARSO meteorological station snow-presence records.
     `snow_patchiness.py` / `crop_evaluation.py` / `error_analysis.py`
     (orphaned exploratory scripts — zero downstream consumers, output
     never referenced in the manuscript).
+- `preprocessing/remove_bad_images.py` — first pass on any new camera's raw
+  dump: moves night/dark frames (sunrise/sunset margin, optional brightness
+  threshold) and corrupt/truncated files to a side folder before anything
+  else touches the data. Corrupt-image detection used to be scattered,
+  inconsistent try/except skips wherever a script happened to hit a broken
+  file; this is the one upfront pass (was `remove_night_images.py`).
 - `preprocessing/segmentation/camera_valid_regions/` — hand-drawn per-camera
   masks excluding static obstructions (parking lots, distant landscape) from
-  ground-truth computation.
+  ground-truth computation. `tools/draw_valid_region.py` creates them
+  (click-to-draw polygon). One mask per camera, no sub-view support — see
+  the CM00067 note below.
 - `tools/viewer/app.py` — PyQt desktop viewer for inspecting predictions,
   running batch inference, and comparing model checkpoints against the
   timeseries.
@@ -123,6 +139,33 @@ independent ARSO meteorological station snow-presence records.
   taxonomy tags). These are our own work product, not ARSO's, and are shared
   freely, no request needed. Deposited on Zenodo:
   https://doi.org/10.5281/zenodo.22926962
+
+## Camera image naming
+
+Filenames follow `<CAMERA_ID>_<YYYYMMDDHHMM>_<NN>.jpg`. `NN` is not a frame
+sequence number — it's a per-camera view/feed identifier from the source
+station's own capture system. For every camera in the current cohort except
+one, `NN` is a single fixed value across that camera's entire history (e.g.
+always `_00` for CF00001) — effectively a constant, since the camera only
+has one view.
+
+**CM00067 is the exception**: 8 distinct `NN` values (05, 09, 14, 18, 23,
+27, 32, 36), confirmed by inspecting the actual images — same rough
+timestamp, genuinely different physical scenes (open field vs.
+rooftop-heavy foreground vs. mountain panorama), not duplicate frames or a
+scraping artifact. This lines up with the paper's own text calling out
+CM00067 for "multiple views, houses, and drying racks that confuse
+segmentation" (Sec. "Per-Camera Out-of-Distribution Performance") — it's
+plausibly why CM00067 is the hardest camera in the cohort.
+
+**Nothing in the pipeline currently treats these views separately.** Every
+image under `CM00067/` is processed as one continuous timeline regardless
+of which physical view it came from — ground truth, valid-region masks
+(themselves camera-keyed, one file per camera, no per-view support), and
+every teacher/student/eval script all key on `(camera, stem)` alone. If a
+new multi-view camera gets added, know that this is unbuilt, not just
+undocumented — the `NN` suffix is available in every filename, but nothing
+reads it as a view identifier today.
 
 ## Configuration
 
