@@ -1,0 +1,20 @@
+# Local data/output dirs (see paths.py) — mount these at runtime instead
+# of baking them into the image.
+data/
+workspace/
+model_cache/
+analysis/grids/
+analysis/figures/
+analysis/shap_gru/
+qa/checkpoints/
+models/*/checkpoints/
+
+.git/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Editor/OS cruft
+*.swp
+.DS_Store

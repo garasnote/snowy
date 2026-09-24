@@ -135,14 +135,25 @@ for reference but are not necessary outside that HPC environment.
 
 ## Requirements
 
-`pip install -r requirements.txt`, then separately install PyTorch (pinned to
-`torch==2.7.0` from the cu126 index — see `scripts/setup_environment.sbatch`
-for the exact command and CUDA 12.6 context this was developed against).
-`requirements.txt` is the real cluster environment file, trimmed to drop a
-few packages this particular repo doesn't need (see comments in the file for
-what and why) and with five genuinely-used packages added back in that were
-missing from the original. `mlflow` is optional (experiment tracking) and
-`PyQt6` is only needed for `tools/viewer/app.py`.
+**Docker (recommended):** `docker build -t snow-detector .` — mirrors
+`scripts/setup_environment.sbatch` exactly (CUDA 12.6 devel / Ubuntu 24.04,
+Python 3.12, pinned `torch==2.7.0`, `requirements.txt`, SAM3). Heavy build
+(mmcv/mmengine/mmsegmentation + SAM3 + notebook extras) — expect a long
+build and a multi-GB image. Run with
+`docker run --gpus all -it --rm -v "$(pwd)/data:/workspace/data" snow-detector`,
+then `hf auth login` inside the container for SAM3 checkpoint downloads.
+
+**Manual:** `pip install -r requirements.txt`, then separately install
+PyTorch (pinned to `torch==2.7.0` from the cu126 index — see
+`scripts/setup_environment.sbatch` for the exact command and CUDA 12.6
+context this was developed against; that script is written for the FRIDA
+cluster's Slurm + Pyxis/enroot setup specifically, not a generic recipe —
+the Dockerfile is the portable equivalent). `requirements.txt` is the real
+cluster environment file, trimmed to drop a few packages this particular
+repo doesn't need (see comments in the file for what and why) and with five
+genuinely-used packages added back in that were missing from the original.
+`mlflow` is optional (experiment tracking) and `PyQt6` is only needed for
+`tools/viewer/app.py`.
 
 ## Reproducing results
 
