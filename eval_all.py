@@ -43,6 +43,86 @@ def img_to_tensor(img_rgb: np.ndarray) -> torch.Tensor:
     return torch.from_numpy(x).permute(2, 0, 1).unsqueeze(0)
 
 
+# No legitimate run in this project exceeds ~0.92 val IoU. Anything above this is
+# the signature of the pre-leakage-fix training runs (the ones that reported
+# ~0.99), so it must never be selected silently.
+LEAKAGE_IOU_TRIPWIRE = 0.95
+
+
+def _val_iou_from_name(path):
+    """Validation IoU encoded in a checkpoint filename, e.g. best-epoch=65-iou=0.821.ckpt."""
+    name = path.name
+    if "iou=" not in name:
+        return -1.0
+    try:
+        return float(name.split("iou=", 1)[1].split(".ckpt")[0].strip())
+    except ValueError:
+        return -1.0
+
+
+def pick_best_ckpt(ckpt_dir, pattern="best-*.ckpt"):
+    """Best epoch inside ONE run directory: highest val IoU in the filename.
+
+    Scope: choosing the epoch within a single run. Choosing between *runs* is a
+    different problem and stays mtime-based deliberately (see eval_snow): runs
+    trained before the annotation-leakage fix reported inflated validation IoU
+    (~0.99), so recency is the cheap proxy for "trained after the fix". Selecting
+    the highest-IoU checkpoint across runs would pick exactly those leaked models.
+
+    Within a run, mtime carries no meaning — the several ``best-*.ckpt`` files of
+    one training run differ by epoch, not by trustworthiness — so selection here
+    uses the IoU recorded in the filename, which every machine agrees on after a
+    fresh clone, an rsync or a Zenodo download.
+
+    Returns None when the directory is missing or holds no candidate.
+    """
+    cands = sorted(Path(ckpt_dir).glob(pattern))
+    if not cands:
+        return None
+    best = max(cands, key=lambda p: (_val_iou_from_name(p), p.name))
+    if _val_iou_from_name(best) > LEAKAGE_IOU_TRIPWIRE:
+        print(f"  !! {best.parent.name}/{best.name} reports val IoU "
+              f"{_val_iou_from_name(best):.4f}, above the {LEAKAGE_IOU_TRIPWIRE} "
+              "tripwire. Runs predating the annotation-leakage fix report "
+              "inflated scores; confirm this run postdates the fix.")
+    return best
+
+
+def _run_sort_key(path):
+    """Chronological key from a run directory name, e.g. mobilenet_…_20260522_052052."""
+    stamp = ""
+    for part in path.name.split("_"):
+        if part.isdigit() and len(part) == 8:
+            stamp = part
+        elif part.isdigit() and len(part) == 6 and stamp:
+            stamp += part
+    return (stamp or "0", path.name)
+
+
+def pick_newest_run_ckpt(base_dir, run_pattern, ckpt_pattern="best-*.ckpt"):
+    """Checkpoint from the newest run directory, ordered by the name, not by mtime.
+
+    Run directories are named ``..._YYYYMMDD_HHMMSS``, so the newest run is the one
+    with the largest stamp. Sorting by mtime gives the same answer on the machine
+    that trained them and a different answer after a clone, an rsync or a Zenodo
+    download resets mtimes — which silently changes every table the block produces.
+    Newest-by-date also preserves the leakage filter the mtime rule was serving:
+    the pre-fix runs are the old ones. Directories without a timestamp fall back to
+    name order and print a note.
+    """
+    runs = sorted((p for p in Path(base_dir).glob(run_pattern) if p.is_dir()),
+                  key=_run_sort_key)
+    if not runs:
+        return None
+    if not _run_sort_key(runs[-1])[0].strip("0"):
+        print(f"  note: run directory {runs[-1].name} carries no timestamp; ordered by name")
+    chosen = runs[-1]
+    ckpt = pick_best_ckpt(chosen, ckpt_pattern)
+    if ckpt is not None:
+        print(f"  run: {chosen.name} -> {ckpt.name}")
+    return ckpt
+
+
 class Evaluator:
     def __init__(self, device="cuda"):
         self.device = device
@@ -311,7 +391,6 @@ def eval_ground(args):
             "deeplabv3": output_dir / "deeplabv3_output",
             "depth": workspace_dir / "depth_output" / "N0.05_F0.95",
             "sam3_text": output_dir / "sam3_dino_output" / "text",
-            "sam3_dino": output_dir / "sam3_dino_output" / "dino+sam",
             "dinov2_pca": output_dir / "dinov2_pca_output",
         }
 
@@ -483,20 +562,19 @@ def eval_ground(args):
         print("\n--- Student Models ---")
 
         ground_student_baselines = {
-            "mobilenet": sorted(Path("models/student_ground/checkpoints").glob("mobilenet_majority_3_*/best-*.ckpt")),
-            "efficientnet": sorted(Path("models/student_ground/checkpoints").glob("efficientnet_majority_3_*/best-*.ckpt"), key=lambda p: p.stat().st_mtime),
-            "dinov2_base": sorted(Path("models/student_ground/checkpoints").glob("dinov2_base_majority_3_*/best-*.ckpt"), key=lambda p: p.stat().st_mtime),
-            "dinov2_large": sorted(Path("models/student_ground/checkpoints").glob("dinov2_large_majority_3_*/best-*.ckpt"), key=lambda p: p.stat().st_mtime),
-            "dinov3_base": sorted(Path("models/student_ground/checkpoints").glob("dinov3_base_majority_3_*/best-*.ckpt"), key=lambda p: p.stat().st_mtime),
+            "mobilenet":    pick_newest_run_ckpt("models/student_ground/checkpoints", "mobilenet_majority_3_*"),
+            "efficientnet": pick_newest_run_ckpt("models/student_ground/checkpoints", "efficientnet_majority_3_*"),
+            "dinov2_base":  pick_newest_run_ckpt("models/student_ground/checkpoints", "dinov2_base_majority_3_*"),
+            "dinov2_large": pick_newest_run_ckpt("models/student_ground/checkpoints", "dinov2_large_majority_3_*"),
+            "dinov3_base":  pick_newest_run_ckpt("models/student_ground/checkpoints", "dinov3_base_majority_3_*"),
         }
 
-        for model_name, student_ckpts in ground_student_baselines.items():
-            if not student_ckpts:
+        for model_name, ckpt_path in ground_student_baselines.items():
+            if ckpt_path is None:
                 print(f"  {model_name}: no checkpoint found")
                 continue
             try:
                 from student_ground.models import build_model
-                ckpt_path = student_ckpts[-1]
                 checkpoint = torch.load(ckpt_path, map_location=args.device, weights_only=False)
                 variant = checkpoint.get("hyper_parameters", {}).get("model_variant", model_name)
                 model = build_model(variant)
@@ -1001,8 +1079,16 @@ def eval_snow(args):
                 model = build_model(variant)
                 state_dict = {k.replace("model.", ""): v for k, v in checkpoint["state_dict"].items() if k.startswith("model.")}
                 model_sd = model.state_dict()
-                filtered = {k: v for k, v in state_dict.items() if k in model_sd and v.shape == model_sd[k].shape}
-                model.load_state_dict(filtered, strict=False)
+                loaded = {k: v for k, v in state_dict.items()
+                          if k in model_sd and v.shape == model_sd[k].shape}
+                missing = [k for k in model_sd if k not in loaded]
+                if missing:
+                    raise RuntimeError(
+                        f"checkpoint {ckpt_path.name} does not fit build_model({variant!r}): "
+                        f"{len(loaded)}/{len(model_sd)} parameters matched, {len(missing)} absent "
+                        f"(e.g. {missing[:2]}). Refusing to score a partially initialised model."
+                    )
+                model.load_state_dict(loaded, strict=True)
                 model = model.to(args.device)
                 model.eval()
 
@@ -1048,16 +1134,17 @@ def eval_snow(args):
         print("\n--- Snow Student Models ---")
 
         snow_ckpts = {
-            "mobilenet": sorted(Path("models/student_snow/checkpoints/snow_gt_mobilenet_20260522_052052").glob("best-*.ckpt"), key=lambda p: p.stat().st_mtime),
-            "convnext":  sorted(Path("models/student_snow/checkpoints/snow_gt_convnext_unfrozen").glob("best-*.ckpt"), key=lambda p: p.stat().st_mtime),
-            "vit_lora":  sorted(Path("models/student_snow/checkpoints/snow_gt_vit_lora_unfrozen").glob("best-*.ckpt"), key=lambda p: p.stat().st_mtime),
+            "mobilenet": pick_best_ckpt("models/student_snow/checkpoints/snow_gt_mobilenet_20260522_052052"),
+            "convnext":  pick_best_ckpt("models/student_snow/checkpoints/snow_gt_convnext_unfrozen"),
+            "vit_lora":  pick_best_ckpt("models/student_snow/checkpoints/snow_gt_vit_lora_unfrozen"),
         }
 
-        for model_name, ckpt_list in snow_ckpts.items():
-            if not ckpt_list:
+        for model_name, ckpt_path in snow_ckpts.items():
+            if ckpt_path is None:
+                print(f"  {model_name}: no checkpoint found under "
+                      "models/student_snow/checkpoints/ - row skipped")
                 continue
-
-            ckpt_path = ckpt_list[-1]
+            print(f"  {model_name}: checkpoint {ckpt_path.parent.name}/{ckpt_path.name}")
 
             try:
                 from student_ground.models import build_model
@@ -1065,10 +1152,23 @@ def eval_snow(args):
                 variant = checkpoint.get("hyper_parameters", {}).get("model_variant", model_name)
                 model = build_model(variant)
                 state_dict = {k.replace("model.", ""): v for k, v in checkpoint["state_dict"].items() if k.startswith("model.")}
-                # Filter out size-mismatched keys
+                # Load strictly. A partial load leaves whole layers at their random
+                # initialisation while the eval still prints an IoU, which is how
+                # snow_gt_vit_lora_unfrozen produced 0.8473 from a model with 84 of
+                # 256 layers never loaded: its LoRA adapters were saved under the
+                # older proj-target layout (down (8,384) / up (384,8)) while this
+                # code now wraps the fused qkv (up (1152,8)).
                 model_sd = model.state_dict()
-                filtered = {k: v for k, v in state_dict.items() if k in model_sd and v.shape == model_sd[k].shape}
-                model.load_state_dict(filtered, strict=False)
+                loaded = {k: v for k, v in state_dict.items()
+                          if k in model_sd and v.shape == model_sd[k].shape}
+                missing = [k for k in model_sd if k not in loaded]
+                if missing:
+                    raise RuntimeError(
+                        f"checkpoint {ckpt_path.name} does not fit build_model({variant!r}): "
+                        f"{len(loaded)}/{len(model_sd)} parameters matched, {len(missing)} absent "
+                        f"(e.g. {missing[:2]}). Refusing to score a partially initialised model."
+                    )
+                model.load_state_dict(loaded, strict=True)
                 model = model.to(args.device)
                 model.eval()
 
@@ -1258,15 +1358,17 @@ def eval_snow(args):
         print(f"  Loaded {len(ood_masks)} OOD GT snow masks")
 
         snow_ckpts = {
-            "mobilenet": sorted(Path("models/student_snow/checkpoints/snow_gt_mobilenet_20260522_052052").glob("best-*.ckpt"), key=lambda p: p.stat().st_mtime),
-            "convnext":  sorted(Path("models/student_snow/checkpoints/snow_gt_convnext_unfrozen").glob("best-*.ckpt"), key=lambda p: p.stat().st_mtime),
-            "vit_lora":  sorted(Path("models/student_snow/checkpoints/snow_gt_vit_lora_unfrozen").glob("best-*.ckpt"), key=lambda p: p.stat().st_mtime),
+            "mobilenet": pick_best_ckpt("models/student_snow/checkpoints/snow_gt_mobilenet_20260522_052052"),
+            "convnext":  pick_best_ckpt("models/student_snow/checkpoints/snow_gt_convnext_unfrozen"),
+            "vit_lora":  pick_best_ckpt("models/student_snow/checkpoints/snow_gt_vit_lora_unfrozen"),
         }
 
-        for model_name, ckpt_list in snow_ckpts.items():
-            if not ckpt_list:
+        for model_name, ckpt_path in snow_ckpts.items():
+            if ckpt_path is None:
+                print(f"  {model_name}: no checkpoint found under "
+                      "models/student_snow/checkpoints/ - row skipped")
                 continue
-            ckpt_path = ckpt_list[-1]
+            print(f"  {model_name}: checkpoint {ckpt_path.parent.name}/{ckpt_path.name}")
             try:
                 from student_ground.models import build_model
                 from student_ground.configs import get_config
@@ -1275,8 +1377,16 @@ def eval_snow(args):
                 model = build_model(variant)
                 state_dict = {k.replace("model.", ""): v for k, v in checkpoint["state_dict"].items() if k.startswith("model.")}
                 model_sd = model.state_dict()
-                filtered = {k: v for k, v in state_dict.items() if k in model_sd and v.shape == model_sd[k].shape}
-                model.load_state_dict(filtered, strict=False)
+                loaded = {k: v for k, v in state_dict.items()
+                          if k in model_sd and v.shape == model_sd[k].shape}
+                missing = [k for k in model_sd if k not in loaded]
+                if missing:
+                    raise RuntimeError(
+                        f"checkpoint {ckpt_path.name} does not fit build_model({variant!r}): "
+                        f"{len(loaded)}/{len(model_sd)} parameters matched, {len(missing)} absent "
+                        f"(e.g. {missing[:2]}). Refusing to score a partially initialised model."
+                    )
+                model.load_state_dict(loaded, strict=True)
                 model = model.to(args.device)
                 model.eval()
 

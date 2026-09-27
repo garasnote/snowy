@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """
-Move night/dark images to a separate folder based on sunrise/sunset times.
+Move bad images (night/dark, and corrupt/truncated) to separate folders.
 
-Uses the astral library to compute sunrise/sunset for each image's date
-at Slovenia's center coordinates (~46.15°N, 14.99°E).
+Night/dark: uses the astral library to compute sunrise/sunset for each
+image's date at Slovenia's center coordinates (~46.15°N, 14.99°E). Margin
+shrinks the daylight window: --margin 60 means daylight is sunrise+60min
+to sunset-60min (removes twilight images).
 
-Margin shrinks the daylight window: --margin 60 means daylight is
-sunrise+60min to sunset-60min (removes twilight images).
+Corrupt/truncated: every image is opened and fully decoded (not just
+header-checked) before any other filter runs — a corrupt file gets pulled
+regardless of what its filename timestamp claims, since we can't trust
+anything else about a file we can't decode. Formerly this was handled ad
+hoc, inconsistently, wherever a script happened to hit a broken image
+(analysis/build_features.py, qa/predict_qa.py, etc. each have their own
+try/except skip); this is the one upfront pass. Disable with
+--no-corrupt-check if you want pure night-filtering speed.
 
 Usage:
-    python remove_night_images.py --data-dir /path/to/data --margin 60
-    python remove_night_images.py --data-dir /path/to/data --margin 60 --brightness 30
-    python remove_night_images.py --data-dir /path/to/data --dry-run
-    python remove_night_images.py --data-dir /path/to/data --cameras CM00024 CF00001
+    python remove_bad_images.py --data-dir /path/to/data --margin 60
+    python remove_bad_images.py --data-dir /path/to/data --margin 60 --brightness 30
+    python remove_bad_images.py --data-dir /path/to/data --dry-run
+    python remove_bad_images.py --data-dir /path/to/data --cameras CM00024 CF00001
+    python remove_bad_images.py --data-dir /path/to/data --no-corrupt-check
 """
 
 import argparse
@@ -89,6 +98,21 @@ def check_brightness(img_path, threshold=30):
         return False
 
 
+def check_corrupt(img_path) -> bool:
+    """Return True if the image can't be fully decoded.
+
+    Image.open() alone only reads the header — a file truncated mid-write
+    (common for images pulled off a live camera feed) can open fine and
+    still fail on actual pixel decode. .load() forces the full decode.
+    """
+    try:
+        with Image.open(img_path) as img:
+            img.load()
+        return False
+    except Exception:
+        return True
+
+
 def process_camera(
     camera_dir: Path,
     output_dir: Path,
@@ -96,6 +120,7 @@ def process_camera(
     dry_run: bool,
     sun_cache: dict,
     brightness_threshold: int = 0,
+    check_corrupt_flag: bool = True,
 ) -> list[dict]:
     """Process all images in a camera folder. Returns log entries."""
     camera_id = camera_dir.name
@@ -104,6 +129,22 @@ def process_camera(
     moved_count = 0
 
     for img_path in image_files:
+        if check_corrupt_flag and check_corrupt(img_path):
+            log_entries.append({
+                "camera": camera_id,
+                "filename": img_path.name,
+                "image_datetime": "",
+                "sunrise": "",
+                "sunset": "",
+                "reason": "corrupt",
+            })
+            moved_count += 1
+            if not dry_run:
+                dest_dir = output_dir / camera_id
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(img_path), str(dest_dir / img_path.name))
+            continue
+
         img_dt = parse_image_datetime(img_path.name)
         if img_dt is None:
             continue
@@ -177,6 +218,11 @@ def main():
         help="Mean brightness threshold (0-255). Images darker than this are moved regardless of sun position (default: 0 = disabled)",
     )
     parser.add_argument(
+        "--no-corrupt-check",
+        action="store_true",
+        help="Skip the corrupt/truncated image check (on by default)",
+    )
+    parser.add_argument(
         "--cameras",
         nargs="+",
         default=None,
@@ -207,12 +253,13 @@ def main():
         return
 
     print("=" * 60)
-    print("NIGHT IMAGE REMOVAL")
+    print("BAD IMAGE REMOVAL (night + corrupt)")
     print("=" * 60)
     print(f"Data dir:    {data_dir}")
     print(f"Output dir:  {output_dir}")
     print(f"Margin:      {args.margin} min (sunrise+{args.margin}, sunset-{args.margin})")
     print(f"Brightness:  {args.brightness} (0=disabled)")
+    print(f"Corrupt check: {'disabled' if args.no_corrupt_check else 'enabled'}")
     print(f"Dry run:     {args.dry_run}")
     print(f"Cameras:     {len(camera_dirs)}")
     print(f"Location:    Slovenia (46.15°N, 14.99°E)")
@@ -225,7 +272,10 @@ def main():
 
     for camera_dir in tqdm(camera_dirs, desc="Processing cameras"):
         total_images = len(list(camera_dir.glob("*.jpg")))
-        entries = process_camera(camera_dir, output_dir, args.margin, args.dry_run, sun_cache, args.brightness)
+        entries = process_camera(
+            camera_dir, output_dir, args.margin, args.dry_run, sun_cache,
+            args.brightness, check_corrupt_flag=not args.no_corrupt_check,
+        )
         all_log_entries.extend(entries)
         camera_stats[camera_dir.name] = {
             "total": total_images,
@@ -257,11 +307,11 @@ def main():
         total_all += stats["total"]
         pct = (stats["night"] / stats["total"] * 100) if stats["total"] > 0 else 0
         action = "would move" if args.dry_run else "moved"
-        print(f"  {camera}: {action} {stats['night']}/{stats['total']} ({pct:.1f}% night)")
+        print(f"  {camera}: {action} {stats['night']}/{stats['total']} ({pct:.1f}% night/corrupt)")
 
     pct_total = (total_night / total_all * 100) if total_all > 0 else 0
     action = "Would move" if args.dry_run else "Moved"
-    print(f"\n  TOTAL: {action} {total_night}/{total_all} images ({pct_total:.1f}% night)")
+    print(f"\n  TOTAL: {action} {total_night}/{total_all} images ({pct_total:.1f}% night/corrupt)")
     print("=" * 60)
 
 

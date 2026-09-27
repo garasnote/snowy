@@ -59,7 +59,7 @@ def parse_annotations(ann_dir):
         "san.json", "heroku.json",
         "01.json", "09.json", "14.json",
         "70.json", "75.json", "80.json", "102.json", "108.json", "112.json",
-        "54.json", "71.json", "115.json",
+        "54.json", "67.json", "71.json", "115.json",
     ]
 
     records = []
@@ -359,19 +359,28 @@ BASE_FEATURE_COLS = [
     "bottom_brightness", "bottom_white_frac",
 ]
 
-TEMPORAL_METEO_COLS = [
-    "hour", "hour_sin", "hour_cos", "doy_sin", "doy_cos", "month",
-    "t2m", "visibility", "weather_code", "snow_present_meteo",
-]
+# Timestamp-derived — always real, never NaN regardless of meteo availability.
+TEMPORAL_COLS = ["hour", "hour_sin", "hour_cos", "doy_sin", "doy_cos", "month"]
+# Actual ARSO meteo columns — only real when meteo_hourly.csv was found and
+# joined. Kept separate from TEMPORAL_COLS so build_feature_cols() can drop
+# them when meteo isn't available, instead of training on an all-NaN column
+# (HistGradientBoostingClassifier's binning step crashes on those: zero
+# distinct values makes its sliding_window_view(..., 2) call fail outright,
+# not just perform badly).
+METEO_COLS = ["t2m", "visibility", "weather_code", "snow_present_meteo"]
+TEMPORAL_METEO_COLS = TEMPORAL_COLS + METEO_COLS  # back-compat for any external import
 
 
-def build_feature_cols(sample_feats):
+def build_feature_cols(sample_feats, include_meteo=True):
     """Build full feature col list from a sample feature dict."""
     pyramid_cols = sorted([
         k for k in sample_feats
         if k.startswith(("hog_", "sift_"))
     ])
-    return BASE_FEATURE_COLS + pyramid_cols + TEMPORAL_METEO_COLS
+    cols = BASE_FEATURE_COLS + pyramid_cols + TEMPORAL_COLS
+    if include_meteo:
+        cols += METEO_COLS
+    return cols
 
 
 # ── Mistake plotting (optional, --plot-mistakes) ───────────────────────────
@@ -527,16 +536,18 @@ def main():
 
     # 4. Meteo features
     meteo_path = Path(args.meteo)
-    if meteo_path.exists():
+    has_meteo = meteo_path.exists()
+    if has_meteo:
         print("Adding meteo features...")
         df = add_meteo_features(df, meteo_path)
     else:
-        print(f"  Warning: {meteo_path} not found, skipping meteo features")
+        print(f"  Warning: {meteo_path} not found, skipping meteo features "
+              f"(dropped from FEATURE_COLS, not trained on as all-NaN)")
         for col in ["t2m", "visibility", "weather_code", "snow_present_meteo"]:
             df[col] = np.nan
 
     # Build feature column list dynamically (includes pyramid features)
-    FEATURE_COLS = build_feature_cols(img_features[0])
+    FEATURE_COLS = build_feature_cols(img_features[0], include_meteo=has_meteo)
 
     # Save feature CSV
     csv_path = output_dir / "qa_features.csv"

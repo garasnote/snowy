@@ -137,8 +137,28 @@ independent ARSO meteorological station snow-presence records.
   request to the corresponding author.
 - **Manual annotations**: Label Studio exports (ground/snow brush masks, QA
   taxonomy tags). These are our own work product, not ARSO's, and are shared
-  freely, no request needed. Deposited on Zenodo:
-  https://doi.org/10.5281/zenodo.22926962
+  freely, no request needed. Zenodo deposit reserved
+  (10.5281/zenodo.22926962) but not yet published — DOI does not resolve
+  until the record is published, so it's left unlinked here for now.
+
+  Layout of `data/annotations/` — one canonical revision per camera; nothing is
+  merged at load time, and no file here is generated on the fly:
+
+  | file(s) | contents |
+  |---|---|
+  | `01, 09, 14, 70, 75, 80, 102, 108, 112.json` | snow annotations for the nine in-distribution cameras, **merged** export, one file per camera |
+  | `54, 67, 71, 115.json` | the four held-out cameras: ground (`Ground Mano`) **and** snow (`Snow Mano`) |
+  | `ground_annotations.json` | pixel-level ground masks, older label spelling `Ground`, all cameras |
+  | `premerge/` | provenance only — nothing loads from here. The raw single-session Label Studio exports the merged files were built from. `san.json` and `heroku.json` are not cameras: they hold extra snow frames for CF00001 (70 and 12), CM00009 (5) and CM00014 (6), which is why the merged CF00001 file is much larger than the pre-merge one. |
+
+  Content of the merged snow files matches the per-camera files deposited on
+  Zenodo, so repository and archive agree. Rebuild both together if you
+  re-export from Label Studio, or they will drift again.
+
+  Counts to check after any re-export: 212 ground masks and 918 snow-task
+  records (678 snow-covered, 240 snow-free) across the nine in-distribution
+  cameras, matching Table 2 of the paper. `verify_tables.py` recomputes these
+  and fails loudly on a mismatch.
 
 ## Camera image naming
 
@@ -204,8 +224,9 @@ Each `models/*/train.py` and `qa/train_*.py` script is
 self-contained and documents its own CLI arguments in its module docstring.
 `scripts/*.sbatch` show the exact invocations (variants, hyperparameters,
 checkpoint paths) used to produce the results reported in the paper.
-`eval_all.py --task {ground,snow,qa,smoother} --types <...>` reproduces the
-evaluation tables; run with `--help` for the full list of `--types` per task.
+`eval_all.py --task {ground,snow,qa,smoother,ood-per-camera} --types <...>`
+reproduces the evaluation tables; run with `--help` for the full list of
+`--types` per task.
 
 ## Citation
 

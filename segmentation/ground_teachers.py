@@ -34,6 +34,9 @@ from tqdm import tqdm
 
 _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from paths import WORKSPACE_DIR
 
 # ── shared: ADE20K ground-related classes (DeepLabV3+, SegFormer) ──────────
 # See: https://docs.google.com/spreadsheets/d/1se8YEtb2detS7OuPE86fXGyD269pMycAWe2mtKUj2W8
@@ -288,7 +291,7 @@ def deeplabv3_process_canonical_views(canonical_dir, inferencer, output_dir,
 
 def add_deeplabv3_subparser(subparsers):
     p = subparsers.add_parser("deeplabv3", help="DeepLabV3+ (ADE20K, OpenMMLab)")
-    _add_input_and_common_args(p, "preprocessing/segmentation/deeplabv3_output")
+    _add_input_and_common_args(p, str(WORKSPACE_DIR / "segmentation" / "ground" / "deeplabv3"))
     p.add_argument("--model", type=str,
                     default="deeplabv3plus_r101-d8_4xb4-160k_ade20k-512x512",
                     help="MMSeg model name (config name, checkpoint auto-downloaded)")
@@ -523,7 +526,7 @@ def segformer_process_canonical_views(canonical_dir, model, processor, output_di
 
 def add_segformer_subparser(subparsers):
     p = subparsers.add_parser("segformer", help="SegFormer (ADE20K pretrained)")
-    _add_input_and_common_args(p, "preprocessing/segmentation/segformer_output")
+    _add_input_and_common_args(p, str(WORKSPACE_DIR / "segmentation" / "ground" / "segformer"))
     p.add_argument("--model", type=str, default="nvidia/segformer-b5-finetuned-ade-640-640",
                     help="HuggingFace model ID")
     p.add_argument("--ground-labels", nargs="+", type=int, default=DEFAULT_GROUND_LABELS,
@@ -874,7 +877,7 @@ def sam3_process_canonical_views(canonical_dir, sam_processor, method, text_prom
 
 def add_sam3_subparser(subparsers):
     p = subparsers.add_parser("sam3", help="SAM3 text-prompted (+ optional DINOv2-guided)")
-    _add_input_and_common_args(p, "preprocessing/segmentation/sam3_dino_output")
+    _add_input_and_common_args(p, str(WORKSPACE_DIR / "segmentation" / "ground" / "sam3"))
     p.add_argument("--method", choices=["text", "dino+sam"], default="text",
                     help="Segmentation method (default: text -- the one used in the paper)")
     p.add_argument("--text-prompts", type=str, default="ground,terrain,earth,road,grass",
@@ -1165,7 +1168,7 @@ def dinov2_pca_process_canonical_views(canonical_dir, model, processor, output_d
 
 def add_dinov2_pca_subparser(subparsers):
     p = subparsers.add_parser("dinov2_pca", help="DINOv2 PCA (zero-shot, no training)")
-    _add_input_and_common_args(p, "preprocessing/segmentation/dinov2_pca_output")
+    _add_input_and_common_args(p, str(WORKSPACE_DIR / "segmentation" / "ground" / "dinov2_pca"))
     p.add_argument("--model", type=str, default="facebook/dinov2-base",
                     help="DINOv2 model (base, large, giant)")
     p.add_argument("--input-size", type=int, default=518,
@@ -1725,7 +1728,7 @@ def _depth_create_summary_grid(base_output_dir, run_dirs, run_labels, cameras,
 
 def add_depth_subparser(subparsers):
     p = subparsers.add_parser("depth", help="Depth Anything V2 (depth-threshold ground)")
-    _add_input_and_common_args(p, "preprocessing/segmentation/depth_output")
+    _add_input_and_common_args(p, str(WORKSPACE_DIR / "segmentation" / "ground" / "depth"))
     p.add_argument("--model-size", choices=["small", "base", "large"], default="large",
                     help="Depth Anything V2 model size")
     p.add_argument("--method", choices=["threshold", "otsu"], default="otsu",

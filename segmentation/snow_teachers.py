@@ -27,6 +27,7 @@ import argparse
 import csv
 import json
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -45,6 +46,9 @@ except ImportError as e:
 
 _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from paths import WORKSPACE_DIR
 
 
 def _add_common_args(p, default_output_dir):
@@ -208,7 +212,7 @@ def clipseg_process_image(image_path, model, processor, text_prompt, output_dir,
 
 def add_clipseg_subparser(subparsers):
     p = subparsers.add_parser("clipseg", help="CLIPSeg text-prompted dense prediction")
-    _add_common_args(p, str(_REPO_ROOT / "preprocessing" / "segmentation" / "clipseg_snow_output"))
+    _add_common_args(p, str(WORKSPACE_DIR / "segmentation" / "snow" / "clipseg"))
     p.add_argument("--text-prompt", type=str, default="snow",
                     help="Text prompt for segmentation (default: snow)")
     p.add_argument("--threshold", type=float, default=0.5,
@@ -276,8 +280,16 @@ def florence2_load_model(model_size="large", device="cuda"):
         print(f"  Cleared stale cache: {d.name}")
 
     torch_dtype = torch.float16 if device == "cuda" else torch.float32
+    # attn_implementation="eager" works around a transformers regression
+    # (>=4.55, https://github.com/huggingface/transformers/issues/39974):
+    # Florence-2's trust_remote_code model class predates transformers'
+    # newer SDPA-capability auto-detection and doesn't define
+    # `_supports_sdpa`, which that detection path requires. "eager" skips
+    # it entirely. No known transformers version satisfies both this and
+    # DINOv3's own >=4.56.0 floor, so this is the fix, not a version pin.
     model = AutoModelForCausalLM.from_pretrained(
         model_id, torch_dtype=torch_dtype, trust_remote_code=True,
+        attn_implementation="eager",
     ).eval().to(device)
     processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
 
@@ -295,9 +307,16 @@ def florence2_run(model, processor, image, text_prompt, device="cuda"):
     inputs = processor(text=prompt, images=image, return_tensors="pt").to(device, torch_dtype)
 
     with torch.inference_mode():
+        # use_cache=False works around a second transformers regression on
+        # top of the attn_implementation one above: newer transformers
+        # passes a Cache object instead of the legacy tuple format Florence-
+        # 2's remote code's prepare_inputs_for_generation expects, hitting
+        # `past_key_values[0][0].shape` on a None entry mid-generation.
+        # Disabling the KV cache sidesteps that code path entirely — slower
+        # (no caching across steps) but correct.
         generated_ids = model.generate(
             input_ids=inputs["input_ids"], pixel_values=inputs["pixel_values"],
-            max_new_tokens=1024, num_beams=3, do_sample=False,
+            max_new_tokens=1024, num_beams=3, do_sample=False, use_cache=False,
         )
 
     generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
@@ -390,7 +409,7 @@ def florence2_process_image(image_path, model, processor, text_prompt, output_di
 
 def add_florence2_subparser(subparsers):
     p = subparsers.add_parser("florence2", help="Florence-2 referring expression segmentation")
-    _add_common_args(p, "preprocessing/segmentation/florence2_snow_output")
+    _add_common_args(p, str(WORKSPACE_DIR / "segmentation" / "snow" / "florence2"))
     p.add_argument("--model-size", choices=["base", "large"], default="large",
                     help="Florence-2 model size (default: large)")
     p.add_argument("--text-prompt", type=str, default="snow",
@@ -593,7 +612,7 @@ def groundedsam2_process_image(image_path, gdino_model, gdino_processor, sam2_pr
 
 def add_groundedsam2_subparser(subparsers):
     p = subparsers.add_parser("groundedsam2", help="GroundingDINO detection + SAM2 refinement")
-    _add_common_args(p, str(_REPO_ROOT / "preprocessing" / "segmentation" / "groundedsam2_snow_output"))
+    _add_common_args(p, str(WORKSPACE_DIR / "segmentation" / "snow" / "groundedsam2"))
     p.add_argument("--box-threshold", type=float, default=0.3,
                     help="GroundingDINO box confidence threshold (default: 0.3)")
     p.add_argument("--text-threshold", type=float, default=0.25,
@@ -795,7 +814,7 @@ def sam3_visualize(image, snow_mask, sky_mask, output_path, title=""):
 
 def add_sam3_subparser(subparsers):
     p = subparsers.add_parser("sam3", help="SAM3 text-prompted (via SAMWrapper)")
-    _add_common_args(p, "preprocessing/segmentation/sam3_snow_output")
+    _add_common_args(p, str(WORKSPACE_DIR / "segmentation" / "snow" / "sam3"))
     p.add_argument("--ground-mask-dir", type=str, default=None,
                     help="Ground mask dir to restrict snow to ground region")
     p.add_argument("--threshold", type=float, default=0.4,
@@ -954,7 +973,7 @@ def yoloe_process_image(image_path, model, conf, output_dir, debug=False):
 
 def add_yoloe_subparser(subparsers):
     p = subparsers.add_parser("yoloe", help="YOLOe-26 open-vocabulary instance segmentation")
-    _add_common_args(p, "preprocessing/segmentation/yoloe_snow_output")
+    _add_common_args(p, str(WORKSPACE_DIR / "segmentation" / "snow" / "yoloe"))
     p.add_argument("--model-size", choices=["s", "m", "l"], default="l",
                     help="YOLOe-26 model size (default: l)")
     p.add_argument("--conf", type=float, default=0.25,
@@ -1327,7 +1346,7 @@ def add_seggpt_subparser(subparsers):
     p.add_argument("--cameras", nargs="+", default=[],
                     help="Specific cameras (default: all)")
     p.add_argument("--output-dir", type=str,
-                    default=str(_REPO_ROOT / "preprocessing" / "segmentation" / "seggpt_snow_output"),
+                    default=str(WORKSPACE_DIR / "segmentation" / "snow" / "seggpt"),
                     help="Output directory")
     p.add_argument("--num-prompts", type=int, default=5,
                     help="Number of prompt examples per camera (default: 5)")

@@ -1,8 +1,8 @@
 # Base list is the real requirements.txt from the FRIDA cluster environment
-# (master/requirements.txt), pasted by the author 2026-09-22. Five packages
-# marked "(added)" below were missing from that file but are genuinely
-# imported by code in this repo (confirmed by scanning every `import`
-# statement here) - either an oversight in the original file, or installed
+# (master/requirements.txt), pasted by the author 2026-09-22, plus packages
+# added afterward (ultralytics; the transformers upper bound) that were
+# missing or too loose in that pasted file but are genuinely required by
+# code in this repo — either an oversight in the original file, or handled
 # some other way on the cluster. Torch/torchvision/torchaudio are
 # deliberately not listed here: setup_environment.sbatch installs them
 # separately, pinned to torch==2.7.0 from the cu126 index (see README).
@@ -27,8 +27,12 @@ scikit-learn
 albumentations
 shap
 
-# DINOv3 dependencies
-transformers>=4.56.0
+# DINOv3 dependencies. Upper-bounded below 5.0: transformers 5.x breaks
+# Florence-2's trust_remote_code config (AttributeError:
+# 'Florence2LanguageConfig' object has no attribute 'forced_bos_token_id' —
+# a known, widespread incompatibility, not specific to this repo). DINOv3
+# only needs the >=4.56.0 floor, so this range satisfies both.
+transformers>=4.56.0,<5.0.0
 accelerate
 
 # Sunrise/sunset computation
@@ -49,9 +53,16 @@ anomalib
 # the original cluster environment without version pins in the pasted source;
 # confirm compatibility with mmengine/mmcv/mmsegmentation's own version
 # constraints against your CUDA/torch build before installing.
+#
+# mmcv IS pinned below (<2.2.0): mmsegmentation's own __init__.py asserts
+# 2.0.0rc4 <= mmcv < 2.2.0 and raises AssertionError on import otherwise.
+# An unpinned "mmcv" line resolves to the latest release (2.2.0 as of this
+# writing), which builds and installs fine — the failure only shows up the
+# first time something actually does `import mmseg`. Caught by actually
+# building and running the Docker image, not by the install step itself.
 scikit-image
 mmengine
-mmcv
+mmcv<2.2.0
 mmsegmentation
 plotly
 streamlit
@@ -60,3 +71,12 @@ optuna
 timm
 PyQt6
 imageio-ffmpeg
+
+# YOLOE teacher (segmentation/snow_teachers.py's yoloe subcommand) — (added,
+# same basis as the other five: genuinely imported, missing from the
+# original pasted file)
+ultralytics
+
+# sam2 (GroundedSAM2 teacher's mask-refinement step) is NOT pip-installed
+# here — like SAM3, it has no clean PyPI release; it's git-cloned and
+# installed with -e in the Dockerfile instead.

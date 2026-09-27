@@ -15,3 +15,16 @@ __pycache__/
 output/
 checkpoints/
 cache/
+
+# Generated at runtime (paths.py WORKSPACE_DIR): teacher-mask symlinks and
+# fusion pseudo-label outputs live here, not in the repository.
+/workspace/
+
+# Local safety copies taken before destructive retrains; never shipped.
+.hermes_backups/
+
+# Real ARSO webcam imagery + annotations — redistribution rights not
+# confirmed for the images (see README "What's not here"). Blanket-ignored
+# regardless of file type, not just the *.jpg/*.png rules above, since this
+# also covers annotation JSON/meteo files placed here for local smoke-testing.
+/data/
