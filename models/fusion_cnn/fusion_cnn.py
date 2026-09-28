@@ -187,6 +187,38 @@ def load_gt_stems(task: str) -> List[Tuple[str, str]]:
     return stems
 
 
+def filter_complete_stems(stems, teachers, task, verbose=True):
+    """Keep only the frames for which EVERY teacher produced a mask.
+
+    A zero-filled channel is worse than a smaller training set. The network
+    learns that an all-zero channel is a legitimate input, so the frames that
+    hit the zero-fill path teach it to ignore that teacher exactly where the
+    teacher has nothing to say - and one camera's missing 44 frames can be a
+    large share of that camera's data. Dropping incomplete frames keeps every
+    channel a genuine prediction. Nothing is invented and nothing is resampled.
+    """
+    suffix = "_ground.png" if task == "ground" else "_snow.png"
+    keep, dropped = [], {}
+    for cam, stem in stems:
+        blockers = [name for name, folder in teachers
+                    if not (folder / cam / f"{stem}{suffix}").exists()]
+        if blockers:
+            dropped.setdefault(tuple(blockers), []).append((cam, stem))
+        else:
+            keep.append((cam, stem))
+    if verbose:
+        print(f"complete-channel filter: {len(keep)}/{len(stems)} frames kept, "
+              f"{len(stems) - len(keep)} dropped")
+        for blockers, frames in sorted(dropped.items(), key=lambda kv: -len(kv[1])):
+            cams = {}
+            for c, _ in frames:
+                cams[c] = cams.get(c, 0) + 1
+            camtxt = ", ".join(f"{c}:{n}" for c, n in
+                               sorted(cams.items(), key=lambda kv: -kv[1])[:4])
+            print(f"  - {len(frames):>3} frames lack {'+'.join(blockers)}  ({camtxt})")
+    return keep
+
+
 def decode_gt(task, cam, stem):
     import json as _json
     from student_ground.dataset import decode_ls_rle
@@ -277,6 +309,11 @@ def run_train_fusion(args):
 
     stems = load_gt_stems(args.task)
     print(f"GT samples: {len(stems)}")
+    if getattr(args, "complete_only", False):
+        stems = filter_complete_stems(stems, teachers, args.task)
+        if len(stems) == 0:
+            print("ERROR: no frame has a mask from every teacher")
+            return
     if len(stems) == 0:
         print("ERROR: no GT found"); return
 
@@ -342,6 +379,9 @@ def add_train_subparser(subparsers):
     p.add_argument("--lr",         type=float, default=1e-3)
     p.add_argument("--size",       type=int,   default=512)
     p.add_argument("--device",     default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--complete-only", action="store_true",
+                   help="train only on frames where every teacher produced a mask, "
+                        "so no channel is ever zero-filled")
     return p
 
 

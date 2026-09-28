@@ -301,6 +301,29 @@ strict check changes nothing.
 
 ---
 
+## Channel completeness (FusionCNN)
+
+Every teacher channel must have a real mask for a frame. If one is missing,
+FusionCNN zero-fills that channel for that sample — and the network then learns
+that an all-zero channel is a legitimate input for that teacher. Check before
+training, and after any re-wiring:
+
+    python tools/verify_fusion_inputs.py
+
+It prints have/exp per channel and fails if any channel is short. The five snow
+teachers other than Florence-2 share a 44-frame hole (CF00001, from 2022-12-11)
+and seggpt has 40 more of its own; those masks were never produced and cannot be
+recovered by renaming (checked: no `<stem> (1)_snow.png` variant exists).
+
+If the masks cannot be regenerated yet, train on the frames that are complete
+rather than zero-filling:
+
+    python models/fusion_cnn/fusion_cnn.py train --task snow --complete-only
+
+It drops exactly the frames lacking a mask from any teacher, prints what it
+dropped and why, and leaves every channel a genuine prediction — 594 of 678
+frames for snow, 504 train / 90 val, zero zero-fill warnings.
+
 # Deployment / Usage
 
 Not built yet. `models/student_ground/inference.py` and
