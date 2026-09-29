@@ -123,6 +123,34 @@ fi
 if [ -d "\${UL_OVERLAY}/ultralytics" ]; then
     echo "  ultralytics: \$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import ultralytics; print(ultralytics.__version__)' "\${UL_OVERLAY}" 2>/dev/null || echo 'overlay present, version unknown')"
 fi
+# set_classes(["snow"]) builds CLIP text embeddings, so ultralytics needs the
+# `clip` package (its own fork) plus ftfy/regex. Its AutoUpdate path cannot work
+# here: the image's python is externally managed, so it installs nothing and then
+# fails on `import clip`. Same overlay, same rule: --no-deps, image untouched.
+if [ ! -d "\${UL_OVERLAY}/clip" ]; then
+    echo "  clip      : installing ultralytics CLIP fork into the overlay"
+    if command -v git >/dev/null 2>&1; then
+        CLIP_SPEC="git+https://github.com/ultralytics/CLIP.git"
+    else
+        echo "  clip      : no git in the image, using the source tarball instead"
+        curl -sL https://github.com/ultralytics/CLIP/archive/refs/heads/main.tar.gz -o /tmp/ultralytics_clip.tar.gz \\
+            && CLIP_SPEC="/tmp/ultralytics_clip.tar.gz"
+    fi
+    if [ -n "\${CLIP_SPEC:-}" ]; then
+        if command -v uv >/dev/null 2>&1; then
+            uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps ftfy regex "\${CLIP_SPEC}"
+        elif [ -x /usr/local/bin/uv ]; then
+            /usr/local/bin/uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps ftfy regex "\${CLIP_SPEC}"
+        else
+            python3 -m pip install --no-cache-dir --break-system-packages --target "\${UL_OVERLAY}" --no-deps ftfy regex "\${CLIP_SPEC}"
+        fi
+    fi
+    if [ -d "\${UL_OVERLAY}/clip" ]; then
+        echo "  clip      : overlay now provides clip"
+    else
+        echo "  clip      : could not be installed - yoloe will fail at set_classes"
+    fi
+fi
 export PYTHONPATH="\${UL_OVERLAY}:${RELEASE_DIR}${PY_EXTRA_PART}"
 echo ""
 
