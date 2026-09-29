@@ -48,6 +48,13 @@ HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
 LIMIT_FLAG=""
 [ "${LIMIT}" -gt 0 ] 2>/dev/null && LIMIT_FLAG="--limit ${LIMIT}"
 
+# Optional extra import path (PY_EXTRA): set it when a teacher's package lives in
+# a site-packages that the image does not have on its own path, e.g.
+#   PY_EXTRA=/shared/home/juan.osorio/someenv/lib/python3.12/site-packages
+PY_EXTRA="${PY_EXTRA:-}"
+PY_EXTRA_PART=""
+[ -n "${PY_EXTRA}" ] && PY_EXTRA_PART=":${PY_EXTRA}"
+
 DATA_DIR_FLAGS=""
 for d in ${DATA_DIRS}; do
     DATA_DIR_FLAGS="${DATA_DIR_FLAGS} --data-dir ${d}"
@@ -63,7 +70,7 @@ cat > "${INNER}" <<INNER_EOF
 #!/bin/bash
 set -u
 cd "${RELEASE_DIR}"
-export PYTHONPATH="${RELEASE_DIR}"
+export PYTHONPATH="${RELEASE_DIR}${PY_EXTRA_PART}"
 
 # Hugging Face cache + token. The container runs as root, so its HOME is /root
 # and it cannot see the token or the model cache that the login node's

@@ -109,6 +109,9 @@ def parse_args(argv=None):
     # (snow_teachers.py:1354-1377, 1394-1401).
     ap.add_argument("--ann-dir", default=None,
                     help="seggpt: Label Studio GT annotation dir for prompt examples")
+    ap.add_argument("--sam2-dir", default=None,
+                    help="groundedsam2: directory containing the sam2 package, if "
+                         "it is not /workspace/sam2, /opt/sam2 or <master>/sam2")
     ap.add_argument("--prompt-dir", default=None,
                     help="seggpt: manual prompt dir (alternative to --ann-dir)")
     ap.add_argument("--num-prompts", type=int, default=5,
@@ -252,15 +255,27 @@ def main(argv=None):
         # sam2 is a source checkout in this image rather than an installed
         # package, so make its directory importable before the loader runs
         # `from sam2.sam2_image_predictor import SAM2ImagePredictor`.
-        for cand in ("/workspace/sam2", "/opt/sam2"):
-            if Path(cand).is_dir() and cand not in sys.path:
-                sys.path.insert(0, cand)
+        rel_root = Path(__file__).resolve().parents[1]
+        cands = [
+            args.sam2_dir,                       # explicit, if given
+            rel_root.parent / "sam2",            # <master>/sam2, beside the release
+            Path("/workspace/sam2"),
+            Path("/opt/sam2"),
+        ]
+        tried = []
+        for cand in cands:
+            if not cand:
+                continue
+            tried.append(str(cand))
+            if Path(cand).is_dir() and str(cand) not in sys.path:
+                sys.path.insert(0, str(cand))
                 print(f"  sam2 source dir on sys.path: {cand}")
         try:
             import sam2  # noqa: F401
         except ImportError as exc:
             print(f"  FATAL: 'sam2' is not importable ({exc}).")
-            print("  Looked for a source checkout in /workspace/sam2 and /opt/sam2.")
+            print("  Looked for a source checkout in: " + ", ".join(tried))
+            print("  Pass --sam2-dir <dir containing the sam2 package> if it lives elsewhere.")
             return 3
         gdino_model, gdino_processor = st.groundedsam2_load_grounding_dino(
             device=args.device)
