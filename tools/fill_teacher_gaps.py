@@ -249,6 +249,19 @@ def main(argv=None):
         # hiera-large predictor; defaults --box-threshold 0.3 (l.634) and
         # --text-threshold 0.25 (l.636). The text prompt "snow." is hardcoded
         # in groundedsam2_detect_boxes (l.509).
+        # sam2 is a source checkout in this image rather than an installed
+        # package, so make its directory importable before the loader runs
+        # `from sam2.sam2_image_predictor import SAM2ImagePredictor`.
+        for cand in ("/workspace/sam2", "/opt/sam2"):
+            if Path(cand).is_dir() and cand not in sys.path:
+                sys.path.insert(0, cand)
+                print(f"  sam2 source dir on sys.path: {cand}")
+        try:
+            import sam2  # noqa: F401
+        except ImportError as exc:
+            print(f"  FATAL: 'sam2' is not importable ({exc}).")
+            print("  Looked for a source checkout in /workspace/sam2 and /opt/sam2.")
+            return 3
         gdino_model, gdino_processor = st.groundedsam2_load_grounding_dino(
             device=args.device)
         sam2_predictor = st.groundedsam2_load_sam2(device=args.device)

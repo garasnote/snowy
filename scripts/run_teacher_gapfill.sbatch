@@ -24,6 +24,7 @@
 #   LIMIT=5 sbatch run_teacher_gapfill.sbatch          # gauge the rate first
 
 MASTER_DIR="${MASTER_DIR:-/shared/home/juan.osorio/master}"
+HOME_ROOT="${HOME_ROOT:-/shared/home/juan.osorio}"
 RELEASE_DIR="${RELEASE_DIR:-${MASTER_DIR}/release_check}"
 SEG_ROOT="${SEG_ROOT:-${MASTER_DIR}/preprocessing/segmentation}"
 FRAMES_DIR="${FRAMES_DIR:-${MASTER_DIR}/tools}"
@@ -63,6 +64,30 @@ cat > "${INNER}" <<INNER_EOF
 set -u
 cd "${RELEASE_DIR}"
 export PYTHONPATH="${RELEASE_DIR}"
+
+# Hugging Face cache + token. The container runs as root, so its HOME is /root
+# and it cannot see the token or the model cache that the login node's
+# huggingface-cli wrote under the user's home - which is why a gated repo like
+# facebook/sam3 answered 401. Point HF at the mounted home cache instead, and
+# take the token from .hf_token if present, else from the hub token file.
+export HF_HOME="\${HF_CACHE:-${MASTER_DIR}/.cache/huggingface}"
+export HUGGINGFACE_HUB_CACHE="\${HF_HOME}/hub"
+export TRANSFORMERS_CACHE="\${HF_HOME}/hub"
+TOKEN_FILE=""
+# Candidates in order: <master>/.hf_token, the home dir's .hf_token (where this
+# cluster actually keeps it), then the hub token file huggingface-cli writes.
+for cand in "${MASTER_DIR}/.hf_token" "${HOME_ROOT}/.hf_token" "\${HF_HOME}/token"; do
+    if [ -z "\${TOKEN_FILE}" ] && [ -s "\${cand}" ]; then TOKEN_FILE="\${cand}"; fi
+done
+if [ -n "\${TOKEN_FILE}" ]; then
+    export HF_TOKEN="\$(tr -d '[:space:]' < "\${TOKEN_FILE}")"
+    echo "  HF token  : loaded from \${TOKEN_FILE} (\${#HF_TOKEN} chars)"
+else
+    echo "  HF token  : NOT FOUND (looked in ${MASTER_DIR}/.hf_token, ${HOME_ROOT}/.hf_token, \${HF_HOME}/token)"
+    echo "              gated repos such as facebook/sam3 will fail with 401"
+fi
+echo "  HF_HOME   : \${HF_HOME}"
+echo ""
 for T in ${TEACHERS}; do
     FF="${FRAMES_DIR}/teacher_gaps_\${T}.txt"
     OUT="${SEG_ROOT}/\${T}_snow_output"
