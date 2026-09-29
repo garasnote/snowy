@@ -158,11 +158,10 @@ fi
 # and put it on PYTHONPATH: sam2/__init__.py needs only hydra, and the compiled
 # _C extension is touched in exactly one leaf function (sam2/utils/misc.py:61)
 # that the image-predictor path never calls.
-if [ ! -d "\${UL_OVERLAY}/sam2_src/sam2" ]; then
-    echo "  sam2      : unpacking facebookresearch/sam2 into the overlay"
-    mkdir -p "\${UL_OVERLAY}/sam2_src"
-    curl -sL https://github.com/facebookresearch/sam2/archive/refs/heads/main.tar.gz -o /tmp/sam2_src.tar.gz \\
-        && tar -xzf /tmp/sam2_src.tar.gz -C "\${UL_OVERLAY}/sam2_src" --strip-components=1
+if [ ! -f "\${UL_OVERLAY}/sam2_src/sam2/__init__.py" ]; then
+    echo "  sam2      : cloning facebookresearch/sam2 into the overlay"
+    rm -rf "\${UL_OVERLAY}/sam2_src"
+    git clone --depth 1 https://github.com/facebookresearch/sam2.git "\${UL_OVERLAY}/sam2_src" 2>&1 | tail -2 || true
 fi
 if [ ! -d "\${UL_OVERLAY}/hydra" ]; then
     echo "  sam2      : installing its config deps (hydra-core, iopath, omegaconf)"
@@ -182,6 +181,25 @@ fi
 export PYTHONPATH="\${UL_OVERLAY}:\${UL_OVERLAY}/sam2_src:${RELEASE_DIR}${PY_EXTRA_PART}"
 echo ""
 
+# The scheduler can hand this job a GPU the container's PyTorch cannot drive: an
+# NVIDIA B200 is sm_100 while the image's torch is built for up to sm_90, and then
+# every teacher dies with "CUDA error: no kernel image is available for execution
+# on the device". These five are small enough for CPU, so probe once and fall back
+# rather than lose the whole run to a node assignment.
+DEVICE="${DEVICE}"
+if [ "\${DEVICE}" = "cuda" ]; then
+    if python3 -c "import torch; torch.zeros(2, device='cuda')" >/dev/null 2>&1; then
+        echo "  Device    : cuda (probe passed)"
+    else
+        echo "  Device    : cuda unusable on this node (GPU newer than the image's"
+        echo "              torch build) -> falling back to cpu"
+        DEVICE=cpu
+    fi
+else
+    echo "  Device    : \${DEVICE}"
+fi
+echo ""
+
 for T in ${TEACHERS}; do
     FF="${FRAMES_DIR}/teacher_gaps_\${T}.txt"
     OUT="${SEG_ROOT}/\${T}_snow_output"
@@ -198,7 +216,7 @@ for T in ${TEACHERS}; do
     EXTRA=""
     if [ "\${T}" = "seggpt" ]; then EXTRA="--ann-dir ${ANN_DIR}"; fi
     if python -u "${DRIVER}" --teacher "\${T}" --frames-file "\${FF}" \
-        ${DATA_DIR_FLAGS} --out-dir "\${OUT}" --device "${DEVICE}" \
+        ${DATA_DIR_FLAGS} --out-dir "\${OUT}" --device "\${DEVICE}" \\
         ${LIMIT_FLAG} \${EXTRA}; then
         echo "== \${T}: finished"
     else
