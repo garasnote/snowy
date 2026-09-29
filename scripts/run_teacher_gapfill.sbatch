@@ -151,7 +151,35 @@ if [ ! -d "\${UL_OVERLAY}/clip" ]; then
         echo "  clip      : could not be installed - yoloe will fail at set_classes"
     fi
 fi
-export PYTHONPATH="\${UL_OVERLAY}:${RELEASE_DIR}${PY_EXTRA_PART}"
+# groundedsam2 imports the `sam2` package (facebookresearch/sam2). The image does
+# not carry it (like ultralytics, it was only ever needed on the older cluster),
+# and it is not in <master>, /workspace or /opt. Installing it with pip from git
+# tries to build its CUDA extension and stalls, so unpack the source tree instead
+# and put it on PYTHONPATH: sam2/__init__.py needs only hydra, and the compiled
+# _C extension is touched in exactly one leaf function (sam2/utils/misc.py:61)
+# that the image-predictor path never calls.
+if [ ! -d "\${UL_OVERLAY}/sam2_src/sam2" ]; then
+    echo "  sam2      : unpacking facebookresearch/sam2 into the overlay"
+    mkdir -p "\${UL_OVERLAY}/sam2_src"
+    curl -sL https://github.com/facebookresearch/sam2/archive/refs/heads/main.tar.gz -o /tmp/sam2_src.tar.gz \\
+        && tar -xzf /tmp/sam2_src.tar.gz -C "\${UL_OVERLAY}/sam2_src" --strip-components=1
+fi
+if [ ! -d "\${UL_OVERLAY}/hydra" ]; then
+    echo "  sam2      : installing its config deps (hydra-core, iopath, omegaconf)"
+    if command -v uv >/dev/null 2>&1; then
+        uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf
+    elif [ -x /usr/local/bin/uv ]; then
+        /usr/local/bin/uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf
+    else
+        python3 -m pip install --no-cache-dir --break-system-packages --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf
+    fi
+fi
+if [ -f "\${UL_OVERLAY}/sam2_src/sam2/__init__.py" ]; then
+    echo "  sam2      : source tree ready at \${UL_OVERLAY}/sam2_src"
+else
+    echo "  sam2      : could not be unpacked - groundedsam2 will still fail"
+fi
+export PYTHONPATH="\${UL_OVERLAY}:\${UL_OVERLAY}/sam2_src:${RELEASE_DIR}${PY_EXTRA_PART}"
 echo ""
 
 for T in ${TEACHERS}; do
