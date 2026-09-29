@@ -131,9 +131,10 @@ if [ -d "\${UL_OVERLAY}/ultralytics" ]; then
     echo "  ultralytics: \$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import ultralytics; print(ultralytics.__version__)' "\${UL_OVERLAY}" 2>/dev/null || echo 'overlay present, version unknown')"
 fi
 # set_classes(["snow"]) builds CLIP text embeddings, so ultralytics needs the
-# `clip` package (its own fork) plus ftfy/regex. Its AutoUpdate path cannot work
-# here: the image's python is externally managed, so it installs nothing and then
-# fails on `import clip`. Same overlay, same rule: --no-deps, image untouched.
+# The ultralytics text model needs the 'clip' package (its own fork) plus ftfy and
+# regex. Its AutoUpdate path cannot work here: the image's python is externally
+# managed, so pip refuses and the loader dies on 'import clip'. Same overlay, same
+# rule: --no-deps, image untouched.
 if [ ! -d "\${UL_OVERLAY}/clip" ]; then
     echo "  clip      : installing ultralytics CLIP fork into the overlay"
     if command -v git >/dev/null 2>&1; then
@@ -158,7 +159,7 @@ if [ ! -d "\${UL_OVERLAY}/clip" ]; then
         echo "  clip      : could not be installed - yoloe will fail at set_classes"
     fi
 fi
-# groundedsam2 imports the `sam2` package (facebookresearch/sam2). The image does
+# groundedsam2 imports the 'sam2' package (facebookresearch/sam2). The image does
 # not carry it (like ultralytics, it was only ever needed on the older cluster),
 # and it is not in <master>, /workspace or /opt. Installing it with pip from git
 # tries to build its CUDA extension and stalls, so unpack the source tree instead
@@ -170,14 +171,17 @@ if [ ! -f "\${UL_OVERLAY}/sam2_src/sam2/__init__.py" ]; then
     rm -rf "\${UL_OVERLAY}/sam2_src"
     git clone --depth 1 https://github.com/facebookresearch/sam2.git "\${UL_OVERLAY}/sam2_src" 2>&1 | tail -2 || true
 fi
-if [ ! -d "\${UL_OVERLAY}/hydra" ]; then
-    echo "  sam2      : installing its config deps (hydra-core, iopath, omegaconf)"
+# Installed unconditionally: an idempotent ~5s cost that cannot go stale the way a
+# "if antlr4 is missing" guard can (the first version of this guarded on hydra and
+# silently kept the overlay short of antlr4, which is what failed job 175963).
+echo "  sam2      : ensuring its config deps (hydra-core, iopath, omegaconf, antlr4, portalocker, pyyaml, packaging)"
+if true; then
     if command -v uv >/dev/null 2>&1; then
-        uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf
+        uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf antlr4-python3-runtime==4.9.3 portalocker pyyaml packaging
     elif [ -x /usr/local/bin/uv ]; then
-        /usr/local/bin/uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf
+        /usr/local/bin/uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf antlr4-python3-runtime==4.9.3 portalocker pyyaml packaging
     else
-        python3 -m pip install --no-cache-dir --break-system-packages --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf
+        python3 -m pip install --no-cache-dir --break-system-packages --target "\${UL_OVERLAY}" --no-deps hydra-core iopath omegaconf antlr4-python3-runtime==4.9.3 portalocker pyyaml packaging
     fi
 fi
 if [ -f "\${UL_OVERLAY}/sam2_src/sam2/__init__.py" ]; then
