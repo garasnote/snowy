@@ -33,6 +33,8 @@ DATA_DIRS="${DATA_DIRS:-${MASTER_DIR}/data ${MASTER_DIR}/night_images}"
 TEACHERS="${TEACHERS:-clipseg groundedsam2 sam3 yoloe seggpt}"
 DEVICE="${DEVICE:-cuda}"
 LIMIT="${LIMIT:-0}"
+# Private overlay for packages the image lacks (see the ultralytics block below).
+UL_OVERLAY="${UL_OVERLAY:-${MASTER_DIR}/ultralytics_overlay}"
 CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs}"
 
 DRIVER="${RELEASE_DIR}/tools/fill_teacher_gaps.py"
@@ -95,6 +97,35 @@ else
 fi
 echo "  HF_HOME   : \${HF_HOME}"
 echo ""
+
+# ultralytics is absent from the image: yoloe was only ever run on the older
+# cluster (its script still points at /d/hpc/home/jo83525/...). Installing it
+# INTO the image would risk pulling a pip torch/torchvision over the container's
+# CUDA build, so install --no-deps into a private overlay and put that overlay
+# first on PYTHONPATH. Only ultralytics and its tiny thop dependency come from
+# there; torch, torchvision and opencv stay the image's own.
+UL_OVERLAY="${UL_OVERLAY}"
+if [ -d "\${UL_OVERLAY}/ultralytics" ]; then
+    echo "  ultralytics: overlay present at \${UL_OVERLAY}"
+else
+    echo "  ultralytics: installing overlay (one time) into \${UL_OVERLAY}"
+    mkdir -p "\${UL_OVERLAY}"
+    if command -v uv >/dev/null 2>&1; then
+        uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps ultralytics ultralytics-thop
+    elif [ -x /usr/local/bin/uv ]; then
+        /usr/local/bin/uv pip install --no-cache --system --target "\${UL_OVERLAY}" --no-deps ultralytics ultralytics-thop
+    elif python3 -m pip --version >/dev/null 2>&1; then
+        python3 -m pip install --no-cache-dir --break-system-packages --target "\${UL_OVERLAY}" --no-deps ultralytics ultralytics-thop
+    else
+        echo "  ultralytics: no installer found - yoloe will fail to import"
+    fi
+fi
+if [ -d "\${UL_OVERLAY}/ultralytics" ]; then
+    echo "  ultralytics: \$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import ultralytics; print(ultralytics.__version__)' "\${UL_OVERLAY}" 2>/dev/null || echo 'overlay present, version unknown')"
+fi
+export PYTHONPATH="\${UL_OVERLAY}:${RELEASE_DIR}${PY_EXTRA_PART}"
+echo ""
+
 for T in ${TEACHERS}; do
     FF="${FRAMES_DIR}/teacher_gaps_\${T}.txt"
     OUT="${SEG_ROOT}/\${T}_snow_output"
