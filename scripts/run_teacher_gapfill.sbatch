@@ -1,8 +1,15 @@
 #!/bin/bash
 #SBATCH --job-name=teacher-gaps
 #SBATCH --partition=frida
-#SBATCH --time=12:00:00
+#SBATCH --time=02:00:00
 #SBATCH --gres=gpu:1
+# GPU model matters here. The container's PyTorch is built for sm_50..sm_90, while
+# the B200 (ixb1-3) and B300 (ixb5/6/8) nodes are sm_100+, where every kernel call
+# fails with "no kernel image is available for execution on the device". The A100
+# (axa) and H100 (ixh) nodes are sm_80/sm_90 and work. Exclude by node name rather
+# than by gres type: naming a type (e.g. gpu:L4:1) is what produced "Invalid
+# generic resource (gres) specification" on this cluster.
+#SBATCH --exclude=ixb1,ixb2,ixb3,ixb4,ixb5,ixb6,ixb7,ixb8
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --output=/shared/home/juan.osorio/output/teacher_gaps_%j.out
