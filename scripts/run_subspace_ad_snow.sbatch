@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=subspace-snow
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=12:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/subspace_ad_snow_%j.out
+#SBATCH --output=subspace_ad_snow_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # SubspaceAD snow segmentation: DINOv2 PCA subspace anomaly detection.
 # Step 1: fit PCA on normal (summer) images
@@ -13,10 +15,10 @@
 # Step 3: evaluate against GT
 #
 # Usage:
-#   sbatch scripts/frida/run_subspace_ad_snow.sbatch
-#   CAMERA=CF00001 sbatch scripts/frida/run_subspace_ad_snow.sbatch
+#   sbatch scripts/run_subspace_ad_snow.sbatch
+#   CAMERA=CF00001 sbatch scripts/run_subspace_ad_snow.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 ANN_DIR="${ANN_DIR:-${MASTER_DIR}/data/annotations}"
 CAMERA="${CAMERA:-}"
@@ -27,14 +29,14 @@ STRATIFY="${STRATIFY:-}"
 FIT_SCRIPT="${MASTER_DIR}/models/subspace_ad/fit.py"
 INFER_SCRIPT="${MASTER_DIR}/models/subspace_ad/inference.py"
 EVAL_SCRIPT="${MASTER_DIR}/models/subspace_ad/eval_iou.py"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 CAMERA_FLAG=""
 if [ -n "${CAMERA}" ]; then
@@ -49,7 +51,7 @@ if [ "${STRATIFY}" = "1" ]; then
 fi
 
 echo "============================================================"
-echo "SUBSPACE-AD — SNOW SEGMENTATION (FRIDA)"
+echo "SUBSPACE-AD — SNOW SEGMENTATION (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Node:        $(hostname)"

@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=eval-ood
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=4:00:00
 #SBATCH --gres=gpu:L4:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=48G
-#SBATCH --output=/shared/home/juan.osorio/output/eval_ood_%j.out
+#SBATCH --output=eval_ood_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # OOD evaluation on new cohort: CM00054, CM00071, CM00115
 #
@@ -15,14 +17,14 @@
 #   SNOW_TYPES="baselines_ood students_ood students_gt_ood" sbatch run_eval_ood.sbatch
 #   QA_TYPES="cnn gradboost qa_ood" sbatch run_eval_ood.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs}"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs}"
 
 GROUND_TYPES="${GROUND_TYPES:-baselines_ood students_ood ood}"
 SNOW_TYPES="${SNOW_TYPES:-baselines_ood students_pseudo_ood students_ood students_gt_ood}"
 QA_TYPES="${QA_TYPES:-cnn gradboost qa_ood}"
 
-mkdir -p /shared/home/juan.osorio/output
+mkdir -p /shared/home/${CLUSTER_USER}/output
 
 echo "============================================================"
 echo "OOD EVALUATION — CM00054 / CM00071 / CM00115"
@@ -39,7 +41,7 @@ srun \
   --container-image=${CONTAINER} \
   --container-mounts=/shared:/shared \
   --container-workdir=${MASTER_DIR} \
-  --export=ALL,HF_TOKEN=$(cat /shared/home/juan.osorio/.hf_token) \
+  --export=ALL,HF_TOKEN=$(cat /shared/home/${CLUSTER_USER}/.hf_token) \
   bash -c "
     set -e
     echo 'Started at \$(date)'

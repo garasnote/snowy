@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=eval-truth
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=4:00:00
 #SBATCH --gres=gpu:L4:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=48G
-#SBATCH --output=/shared/home/juan.osorio/output/eval_truth_%j.out
+#SBATCH --output=eval_truth_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 #
 # Manuscript-vs-measured truth run: evaluates the tasks the paper reports on the
 # full in-distribution frame set and audits whether each checkpoint actually
@@ -36,14 +38,14 @@
 # Prerequisite: the checkpoint-key audit script, pushed to the master dir. If it
 # is absent the audit is skipped *silently*, so check for the PARITY section in
 # the log:
-#   frida-rsync push ~/Documents/Uni/Thesis/paper-code-release/diag_keys.py \
-#                    /shared/home/juan.osorio/master/
+#   the cluster-rsync push ~/Documents/Uni/Thesis/paper-code-release/diag_keys.py \
+#                    /shared/home/${CLUSTER_USER}/master/
 
-MASTER_DIR="${MASTER_DIR:-/shared/home/juan.osorio/master}"
-CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs}"
+MASTER_DIR="${MASTER_DIR:-/shared/home/${CLUSTER_USER}/master}"
+CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs}"
 TASKS="${TASKS:-ground snow qa smoother}"
 
-mkdir -p /shared/home/juan.osorio/output
+mkdir -p /shared/home/${CLUSTER_USER}/output
 
 echo "============================================================"
 echo "EVAL TRUTH RUN"
@@ -55,7 +57,7 @@ srun \
   --container-image=${CONTAINER} \
   --container-mounts=/shared:/shared \
   --container-workdir=${MASTER_DIR} \
-  --export=ALL,HF_TOKEN=$(cat /shared/home/juan.osorio/.hf_token) \
+  --export=ALL,HF_TOKEN=$(cat /shared/home/${CLUSTER_USER}/.hf_token) \
   bash -c "
     set -e
     echo 'Job start:'; date

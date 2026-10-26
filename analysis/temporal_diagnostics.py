@@ -650,15 +650,19 @@ def grid_overlay_mask(img, mask, color=(0, 255, 0), alpha=0.4):
     return cv2.addWeighted(img, 1 - alpha, overlay, alpha, 0)
 
 
-def grid_get_valid_region(camera, h, w):
-    if camera not in GRID_VALID_REGION_CAMERAS:
-        return None
-    vr_path = GRID_VALID_REGION_DIR / f"{camera}.png"
-    if not vr_path.exists():
-        return None
-    from PIL import Image as PILImage
-    vr = np.array(PILImage.open(vr_path).convert("L").resize((w, h), PILImage.NEAREST))
-    return vr
+def grid_get_valid_region(camera, h, w, view=None):
+    """Mask for a camera, or for one view of it; None when the camera has none.
+
+    Any camera with a mask file is masked, no allowlist. A multi-view camera can
+    carry <camera>__<NN>.png per view, with <camera>.png as the fallback.
+    """
+    names = ([f"{camera}__{view}.png", f"{camera}_{view}.png"] if view else []) + [f"{camera}.png"]
+    for name in names:
+        vr_path = GRID_VALID_REGION_DIR / name
+        if vr_path.exists():
+            from PIL import Image as PILImage
+            return np.array(PILImage.open(vr_path).convert("L").resize((w, h), PILImage.NEAREST))
+    return None
 
 
 def grid_load_triplet(camera, stem):
@@ -677,7 +681,8 @@ def grid_load_triplet(camera, stem):
         return None
 
     h, w = img.shape[:2]
-    vr = grid_get_valid_region(camera, h, w)
+    view = stem.rsplit("_", 1)[-1] if "_" in stem else None
+    vr = grid_get_valid_region(camera, h, w, view)
 
     ground_img = img.copy()
     if ground_path.exists():

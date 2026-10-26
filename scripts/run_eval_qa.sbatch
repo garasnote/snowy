@@ -1,14 +1,16 @@
 #!/bin/bash
 #SBATCH --job-name=eval-qa
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=2:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/eval_qa_%j.out
+#SBATCH --output=eval_qa_%j.out
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 TYPES="${TYPES:-gradboost cnn patchcore}"
 
 if [ ! -f "${CONTAINER}" ]; then
@@ -16,10 +18,10 @@ if [ ! -f "${CONTAINER}" ]; then
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
-echo "QA EVALUATION (FRIDA)"
+echo "QA EVALUATION (cluster)"
 echo "============================================================"
 echo "  Job ID:    ${SLURM_JOB_ID}"
 echo "  Node:      $(hostname)"

@@ -1,27 +1,29 @@
 #!/bin/bash
 #SBATCH --job-name=build-ts
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=02:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/build_timeseries_%j.out
+#SBATCH --output=build_timeseries_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Rebuild snow_timeseries.csv with CNN QA filtering.
 # GPU needed for CNN QA inference (~70K images).
 #
 # Usage:
-#   sbatch scripts/frida/run_build_timeseries.sbatch
+#   sbatch scripts/run_build_timeseries.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
 echo "BUILD SNOW TIMESERIES — with CNN QA"

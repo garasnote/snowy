@@ -1,31 +1,33 @@
 #!/bin/bash
 #SBATCH --job-name=subspace-mvtec
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=04:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/subspace_mvtec_%j.out
+#SBATCH --output=subspace_mvtec_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Evaluate SubspaceAD on MVTec AD benchmark.
 #
 # Usage:
-#   sbatch scripts/frida/run_subspace_mvtec.sbatch
-#   K_SHOT=8 sbatch scripts/frida/run_subspace_mvtec.sbatch
-#   VARIANT=dinov2_vitl14 sbatch scripts/frida/run_subspace_mvtec.sbatch
+#   sbatch scripts/run_subspace_mvtec.sbatch
+#   K_SHOT=8 sbatch scripts/run_subspace_mvtec.sbatch
+#   VARIANT=dinov2_vitl14 sbatch scripts/run_subspace_mvtec.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 SCRIPT="${MASTER_DIR}/models/subspace_ad/eval_mvtec.py"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
-MVTEC_DIR="${MVTEC_DIR:-/shared/home/juan.osorio/ml/data/mvtec_anomaly_detection}"
+MVTEC_DIR="${MVTEC_DIR:-/shared/home/${CLUSTER_USER}/ml/data/mvtec_anomaly_detection}"
 
 K_SHOT="${K_SHOT:-4}"
 N_SEEDS="${N_SEEDS:-3}"
 VARIANT="${VARIANT:-dinov2_vitb14}"
 IMAGE_SIZE="${IMAGE_SIZE:-672}"
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
 echo "SUBSPACE-AD — MVTec AD Benchmark"

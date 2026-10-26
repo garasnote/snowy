@@ -1,32 +1,34 @@
 #!/bin/bash
 #SBATCH --job-name=finetune-ground
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=02:00:00
 #SBATCH --gres=gpu:L4:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/finetune_%j.out
+#SBATCH --output=finetune_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Fine-tune student ground segmentation on real GT annotations.
 # Run AFTER train_student_ground.sbatch to get the base checkpoint.
 #
 # Usage:
 #   # Auto-detects the latest best-*.ckpt in checkpoints/:
-#   sbatch scripts/frida/finetune_student_ground.sbatch
+#   sbatch scripts/finetune_student_ground.sbatch
 #
 #   # Chain after training (auto-detect picks up the new checkpoint):
-#   JOB1=$(ENSEMBLE=majority_3 sbatch --parsable scripts/frida/train_student_ground.sbatch)
-#   sbatch --dependency=afterok:${JOB1} scripts/frida/finetune_student_ground.sbatch
+#   JOB1=$(ENSEMBLE=majority_3 sbatch --parsable scripts/train_student_ground.sbatch)
+#   sbatch --dependency=afterok:${JOB1} scripts/finetune_student_ground.sbatch
 #
 #   # Or explicit checkpoint:
-#   CKPT=/path/to/best-checkpoint.ckpt sbatch scripts/frida/finetune_student_ground.sbatch
+#   CKPT=/path/to/best-checkpoint.ckpt sbatch scripts/finetune_student_ground.sbatch
 #
 #   # Camera-specific fine-tuning (only GT from these cameras):
-#   CAMERAS="CM00075 CM00108" sbatch scripts/frida/finetune_student_ground.sbatch
+#   CAMERAS="CM00075 CM00108" sbatch scripts/finetune_student_ground.sbatch
 #
 #   # RGBD fine-tuning:
-#   DEPTH_DIR=/shared/home/juan.osorio/master/preprocessing/segmentation/depth_output/shared_depth \
-#     sbatch scripts/frida/finetune_student_ground.sbatch
+#   DEPTH_DIR=/shared/home/${CLUSTER_USER}/master/preprocessing/segmentation/depth_output/shared_depth \
+#     sbatch scripts/finetune_student_ground.sbatch
 
 MODEL="${MODEL:-mobilenet}"
 DEPTH_DIR="${DEPTH_DIR:-}"
@@ -35,8 +37,8 @@ DEPTH_DIR="${DEPTH_DIR:-}"
 if [ -n "${DEPTH_DIR}" ] && [[ "${MODEL}" != *_rgbd ]]; then
     MODEL="${MODEL}_rgbd"
 fi
-CKPT_DIR="/shared/home/juan.osorio/master/models/student_ground/checkpoints"
-ANNOTATIONS="${ANNOTATIONS:-/shared/home/juan.osorio/master/data/annotations/ground_annotations.json}"
+CKPT_DIR="/shared/home/${CLUSTER_USER}/master/models/student_ground/checkpoints"
+ANNOTATIONS="${ANNOTATIONS:-/shared/home/${CLUSTER_USER}/master/data/annotations/ground_annotations.json}"
 
 # Auto-detect latest best checkpoint if CKPT not explicitly set
 if [ -z "${CKPT}" ]; then
@@ -57,20 +59,20 @@ if [ -z "${CKPT}" ]; then
     fi
     echo "Auto-detected checkpoint: ${CKPT}"
 fi
-DATA_DIR="${DATA_DIR:-/shared/home/juan.osorio/master/data}"
+DATA_DIR="${DATA_DIR:-/shared/home/${CLUSTER_USER}/master/data}"
 EPOCHS="${EPOCHS:-50}"
 LR="${LR:-1e-4}"
 BATCH_SIZE="${BATCH_SIZE:-16}"
 CAMERAS="${CAMERAS:-}"
 
 # HuggingFace token (required for gated models like DINOv3)
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 if [ -f "${HF_TOKEN_FILE}" ]; then
     HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
     export HF_TOKEN
 fi
 
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 if [ -z "${CONTAINER}" ] || [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container image not found at ${CONTAINER}"
     echo "Set SNOW_CONTAINER_IMAGE in your environment."
@@ -108,7 +110,7 @@ fi
 srun \
   --container-image=${CONTAINER} \
   --container-mounts=/shared:/shared \
-  --container-workdir=/shared/home/juan.osorio/master \
+  --container-workdir=/shared/home/${CLUSTER_USER}/master \
   bash -c "
     set -e
     export HF_TOKEN='${HF_TOKEN}'

@@ -1,13 +1,15 @@
 #!/bin/bash
 #SBATCH --job-name=dinov2-pca-ground
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=12:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/dinov2_pca_ground_%j.out
+#SBATCH --output=dinov2_pca_ground_%j.out
 
-# DINOv2 PCA ground segmentation on FRIDA (zero-shot, no training, no labels).
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+# DINOv2 PCA ground segmentation on the cluster (zero-shot, no training, no labels).
 #
 # This is the ground-teacher wrapper the release was missing: the six snow
 # teachers ship run_*_snow.sbatch files, the ground teachers shipped none, which
@@ -23,7 +25,7 @@
 #   CAMERAS="CF00001 CM00009" sbatch scripts/run_dinov2_pca_ground.sbatch
 #   MODEL=facebook/dinov2-large SAMPLE=6 DEBUG=1 sbatch scripts/run_dinov2_pca_ground.sbatch
 
-MASTER_DIR="${MASTER_DIR:-/shared/home/juan.osorio/master}"
+MASTER_DIR="${MASTER_DIR:-/shared/home/${CLUSTER_USER}/master}"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 OUTPUT_DIR="${OUTPUT_DIR:-${MASTER_DIR}/workspace/segmentation/ground/dinov2_pca}"
 CAMERAS="${CAMERAS:-}"
@@ -34,23 +36,23 @@ DEBUG="${DEBUG:-0}"
 
 SCRIPT="${SCRIPT:-${MASTER_DIR}/segmentation/ground_teachers.py}"
 
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 HF_TOKEN=""
 if [ -f "${HF_TOKEN_FILE}" ]; then
     HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
     echo "  HF token:    loaded (${#HF_TOKEN} chars)"
 fi
 
-CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs}"
+CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs}"
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container image not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output" "${OUTPUT_DIR}"
+mkdir -p "/shared/home/${CLUSTER_USER}/output" "${OUTPUT_DIR}"
 
 echo "============================================================"
-echo "DINOV2 PCA - GROUND SEGMENTATION (FRIDA)"
+echo "DINOV2 PCA - GROUND SEGMENTATION (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Node:        $(hostname)"

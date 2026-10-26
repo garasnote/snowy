@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=florence2-gaps
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=12:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/florence2_gaps_%j.out
+#SBATCH --output=florence2_gaps_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Fill in the Florence-2 snow masks that are missing for the annotated frames.
 #
@@ -25,7 +27,7 @@
 #   MODEL_SIZE=base sbatch run_florence2_gaps.sbatch
 #   LIMIT=20 sbatch run_florence2_gaps.sbatch          # gauge the rate first
 
-MASTER_DIR="${MASTER_DIR:-/shared/home/juan.osorio/master}"
+MASTER_DIR="${MASTER_DIR:-/shared/home/${CLUSTER_USER}/master}"
 RELEASE_DIR="${RELEASE_DIR:-${MASTER_DIR}/release_check}"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 # Frames are spread across more than one tree: data/<camera>/ holds the earlier
@@ -51,11 +53,11 @@ FRAMES_FILE="${FRAMES_FILE:-${MASTER_DIR}/tools/florence2_frames_to_fill.txt}"
 TF_VERSION="${TF_VERSION:-4.57.6}"
 TF_OVERLAY="${TF_OVERLAY:-${MASTER_DIR}/tf457}"
 
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 HF_TOKEN=""
 [ -f "${HF_TOKEN_FILE}" ] && HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
 
-CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs}"
+CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs}"
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container image not found at ${CONTAINER}"
     exit 1
@@ -73,10 +75,10 @@ for d in ${DATA_DIRS}; do
     DATA_DIR_FLAGS="${DATA_DIR_FLAGS} --data-dir ${d}"
 done
 
-mkdir -p "/shared/home/juan.osorio/output" "${OUT_DIR}"
+mkdir -p "/shared/home/${CLUSTER_USER}/output" "${OUT_DIR}"
 
 echo "============================================================"
-echo "FLORENCE-2 GAP FILL (FRIDA)"
+echo "FLORENCE-2 GAP FILL (cluster)"
 echo "============================================================"
 echo "  Job ID:       ${SLURM_JOB_ID}"
 echo "  Node:         $(hostname)"

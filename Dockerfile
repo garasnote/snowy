@@ -1,5 +1,5 @@
 # Mirrors scripts/setup_environment.sbatch — the exact environment this
-# project was developed and trained against on the FRIDA cluster (Slurm +
+# project was developed and trained against on the the cluster cluster (Slurm +
 # Pyxis/enroot containers). SAM3 requires Python >=3.12, PyTorch >=2.7,
 # CUDA >=12.6; this image satisfies that with room to spare.
 #
@@ -88,6 +88,19 @@ RUN if [ "$INSTALL_TEACHERS" = "true" ]; then \
         && uv pip install --no-cache -r requirements-slim.txt; \
     fi
 
+# ── Florence-2 requires transformers <5 ─────────────────────────────────────
+# Verified: 4.57.6 loads Florence-2 and produces a mask; from 5.0.0 it cannot
+# load at all. Florence-2's remote vision tower calls .item() while
+# transformers builds the model on the meta device, and 5.x removed the
+# low_cpu_mem_usage opt-out, so no flag or shim recovers it (the
+# forced_bos_token_id shim in segmentation/snow_teachers.py handles the
+# separate 4.58+ config break, but nothing handles this one).
+# requirements.txt keeps >=4.56,<5.0 as the floor because DINOv3 needs >=4.56
+# and the range is shared with other packages; this pin is the version the
+# image is actually built and tested at.
+RUN uv pip install --no-cache "transformers==4.57.6" \
+    && python -c "import transformers; assert transformers.__version__ == '4.57.6', transformers.__version__; print('PASS transformers:', transformers.__version__)"
+
 # ── SAM3 (zero-shot ground/snow teacher; segmentation/*.py's `sam3`
 #    subcommands depend on it). Always creates /workspace/sam3 (even empty)
 #    so the runtime stage's COPY below never fails. ─────────────────────────
@@ -105,14 +118,19 @@ RUN if [ "$INSTALL_SAM3" = "true" ]; then \
 #    it). Like SAM3, no clean PyPI release — git clone + editable install.
 #    Gated on INSTALL_TEACHERS (it's part of the same zero-shot
 #    teacher-generation stack the slim build skips), not INSTALL_SAM3 —
-#    it's an unrelated model despite the similar name. Always creates
-#    /workspace/sam2 (even empty) so the runtime COPY below never fails. ────
+#    it's an unrelated model despite the similar name. Cloned to /opt (NOT
+#    /workspace) deliberately: sam2's own build_sam.py refuses to import if
+#    the cwd contains a "sam2" subdirectory (it assumes it's shadowing the
+#    installed package — a false positive here since the editable install
+#    resolves via absolute path, but the check fires regardless), and every
+#    script in this repo is run from /workspace. Always creates the
+#    directory (even empty) so the runtime COPY below never fails. ────────
 RUN if [ "$INSTALL_TEACHERS" = "true" ]; then \
-        git clone --depth 1 https://github.com/facebookresearch/sam2.git /workspace/sam2 \
-        && cd /workspace/sam2 \
+        git clone --depth 1 https://github.com/facebookresearch/sam2.git /opt/sam2 \
+        && cd /opt/sam2 \
         && uv pip install --no-cache -e . ; \
     else \
-        mkdir -p /workspace/sam2; \
+        mkdir -p /opt/sam2; \
     fi
 
 # ── Verification (fails the build if anything's actually broken, same
@@ -144,9 +162,10 @@ COPY --from=builder /opt/venv /opt/venv
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:${PATH}"
 
+COPY --from=builder /opt/sam2 /opt/sam2
+
 WORKDIR /workspace
 COPY --from=builder /workspace/sam3 /workspace/sam3
-COPY --from=builder /workspace/sam2 /workspace/sam2
 COPY . /workspace
 
 CMD ["/bin/bash"]

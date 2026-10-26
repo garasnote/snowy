@@ -212,7 +212,7 @@ class TemporalSnowDataset(Dataset):
       mask: (seq_len,) bool — True where data exists (for variable-length seqs)
     """
 
-    def __init__(self, df, feature_cols, seq_len=24, stride=6,
+    def __init__(self, df, feature_cols, seq_len=72, stride=6,
                  cameras=None, min_coverage=0.5):
         """
         Args:

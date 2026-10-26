@@ -279,6 +279,21 @@ def florence2_load_model(model_size="large", device="cuda"):
         shutil.rmtree(d, ignore_errors=True)
         print(f"  Cleared stale cache: {d.name}")
 
+    # `forced_bos_token_id` is no longer set as an attribute on the model
+    # config by newer transformers (5.x routes generation parameters into
+    # GenerationConfig instead), but Florence-2's remote
+    # configuration_florence2.py:265 reads `self.forced_bos_token_id` and
+    # raises AttributeError before a single weight loads. The remote code
+    # reads that attribute in exactly one place - an `is None` test kept for
+    # BART-CNN backward compatibility - so None is the correct value.
+    # Verified: reproduces on transformers 5.17.0, fixed by this line, no-op
+    # on 4.57.6.
+    import transformers
+    print(f"  transformers {transformers.__version__}")
+    if not hasattr(transformers.PretrainedConfig, "forced_bos_token_id"):
+        transformers.PretrainedConfig.forced_bos_token_id = None
+        print("  shim: PretrainedConfig.forced_bos_token_id = None")
+
     torch_dtype = torch.float16 if device == "cuda" else torch.float32
     # attn_implementation="eager" works around a transformers regression
     # (>=4.55, https://github.com/huggingface/transformers/issues/39974):
@@ -313,10 +328,13 @@ def florence2_run(model, processor, image, text_prompt, device="cuda"):
         # 2's remote code's prepare_inputs_for_generation expects, hitting
         # `past_key_values[0][0].shape` on a None entry mid-generation.
         # Disabling the KV cache sidesteps that code path entirely — slower
-        # (no caching across steps) but correct.
+        # (no caching across steps) but correct. num_beams=1 (greedy) is a
+        # deliberate speed/quality tradeoff on top of that, since disabling
+        # the cache already makes generation expensive per beam — this is
+        # one of six voted teachers, not a standalone result.
         generated_ids = model.generate(
             input_ids=inputs["input_ids"], pixel_values=inputs["pixel_values"],
-            max_new_tokens=1024, num_beams=3, do_sample=False, use_cache=False,
+            max_new_tokens=1024, num_beams=1, do_sample=False, use_cache=False,
         )
 
     generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]

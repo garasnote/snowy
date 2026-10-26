@@ -1,16 +1,18 @@
 #!/bin/bash
 #SBATCH --job-name=subspace-auroc
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=02:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/subspace_ad_auroc_%j.out
+#SBATCH --output=subspace_ad_auroc_%j.out
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 FIT_SCRIPT="${MASTER_DIR}/models/subspace_ad/fit.py"
 EVAL_SCRIPT="${MASTER_DIR}/models/subspace_ad/evaluate.py"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 K_SHOT="${K_SHOT:-4}"
 N_SEEDS="${N_SEEDS:-5}"
@@ -21,7 +23,7 @@ if [ "${STRATIFY}" = "1" ]; then
     STRATIFY_FLAG="--stratify"
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
 echo "SUBSPACE-AD — FIT + EVAL (AUROC + IoU)"

@@ -1,20 +1,22 @@
 #!/bin/bash
 #SBATCH --job-name=seggpt-snow
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=48:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/seggpt_snow_%j.out
+#SBATCH --output=seggpt_snow_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # SegGPT few-shot snow segmentation (7th teacher).
 # Uses GT annotations as in-context prompts.
 #
 # Usage:
-#   sbatch scripts/frida/run_seggpt_snow.sbatch
-#   SAMPLE=100 sbatch scripts/frida/run_seggpt_snow.sbatch
+#   sbatch scripts/run_seggpt_snow.sbatch
+#   SAMPLE=100 sbatch scripts/run_seggpt_snow.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 ANN_DIR="${ANN_DIR:-${MASTER_DIR}/data/annotations}"
 SAMPLE="${SAMPLE:-0}"
@@ -22,10 +24,10 @@ NUM_PROMPTS="${NUM_PROMPTS:-5}"
 DEBUG="${DEBUG:-0}"
 
 SCRIPT="${MASTER_DIR}/segmentation/snow_teachers.py"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 # HuggingFace token
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 HF_TOKEN=""
 if [ -f "${HF_TOKEN_FILE}" ]; then
     HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
@@ -36,7 +38,7 @@ if [ ! -f "${CONTAINER}" ]; then
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 DEBUG_FLAG=""
 if [ "${DEBUG}" -eq 1 ] 2>/dev/null; then

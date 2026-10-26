@@ -1,21 +1,23 @@
 #!/bin/bash
 #SBATCH --job-name=clipseg-snow
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=12:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/clipseg_snow_%j.out
+#SBATCH --output=clipseg_snow_%j.out
 
-# CLIPSeg text-prompted snow segmentation on FRIDA.
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+# CLIPSeg text-prompted snow segmentation on the cluster.
 # Lightweight CLIP-based dense prediction — different feature space from SAM/YOLO.
 #
 # Usage:
-#   sbatch scripts/frida/run_clipseg_snow.sbatch
-#   CAMERAS="CF00001 CM00009" sbatch scripts/frida/run_clipseg_snow.sbatch
-#   THRESHOLD=0.4 SAMPLE=50 DEBUG=1 sbatch scripts/frida/run_clipseg_snow.sbatch
+#   sbatch scripts/run_clipseg_snow.sbatch
+#   CAMERAS="CF00001 CM00009" sbatch scripts/run_clipseg_snow.sbatch
+#   THRESHOLD=0.4 SAMPLE=50 DEBUG=1 sbatch scripts/run_clipseg_snow.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 OUTPUT_DIR="${OUTPUT_DIR:-${MASTER_DIR}/preprocessing/segmentation/clipseg_snow_output}"
 CAMERAS="${CAMERAS:-}"
@@ -27,24 +29,24 @@ DEBUG="${DEBUG:-0}"
 SCRIPT="${MASTER_DIR}/segmentation/snow_teachers.py"
 
 # HuggingFace token
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 HF_TOKEN=""
 if [ -f "${HF_TOKEN_FILE}" ]; then
     HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
     echo "  HF token:    loaded (${#HF_TOKEN} chars)"
 fi
 
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 if [ -z "${CONTAINER}" ] || [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container image not found at ${CONTAINER}"
     echo "Set SNOW_CONTAINER_IMAGE in your environment."
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
-echo "CLIPSEG — SNOW SEGMENTATION (FRIDA)"
+echo "CLIPSEG — SNOW SEGMENTATION (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Node:        $(hostname)"

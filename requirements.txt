@@ -1,4 +1,4 @@
-# Base list is the real requirements.txt from the FRIDA cluster environment
+# Base list is the real requirements.txt from the the cluster cluster environment
 # (master/requirements.txt), pasted by the author 2026-09-22, plus packages
 # added afterward (ultralytics; the transformers upper bound) that were
 # missing or too loose in that pasted file but are genuinely required by

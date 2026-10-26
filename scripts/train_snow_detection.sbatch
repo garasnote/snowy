@@ -1,16 +1,18 @@
 #!/bin/bash
 #SBATCH --job-name=snow-train
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:A100:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --output=output/train_%x_%j.out
 
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
 # Training script for snow detection
 # Usage: sbatch train_snow_detection.sbatch
 
-SNOW_CONTAINER_IMAGE="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+SNOW_CONTAINER_IMAGE="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 # Check if container exists
 if [ ! -f "${SNOW_CONTAINER_IMAGE}" ]; then

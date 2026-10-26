@@ -1,0 +1,20 @@
+# Space requirements — CPU only.
+#
+# The release's own requirements.txt deliberately omits torch (the cluster installs
+# 2.7.0/cu126 into the container image). A free CPU Space cannot use that build, so
+# this file pins CPU wheels from the PyTorch index instead. Verified locally against
+# the same interpreter generation: torch 2.4.0 + numpy 2.4.6 interop works.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.4.0
+torchvision==0.19.0
+numpy<2.5
+pillow
+scipy
+pandas
+scikit-learn
+huggingface_hub
+gradio>=4.44,<6
+fastapi
+uvicorn
+python-multipart

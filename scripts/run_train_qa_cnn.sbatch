@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=qa-cnn-3class
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=4:00:00
 #SBATCH --gres=gpu:L4:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/qa_cnn_3class_%j.out
+#SBATCH --output=qa_cnn_3class_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Train 3-class QA CNN: clean_no_snow(0) / snow(1) / non_usable(2).
 #
@@ -16,13 +18,13 @@
 #   sbatch run_train_qa_cnn.sbatch
 #   EPOCHS=100 sbatch run_train_qa_cnn.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs}"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs}"
 EPOCHS="${EPOCHS:-50}"
 BATCH_SIZE="${BATCH_SIZE:-32}"
 LR="${LR:-1e-3}"
 
-mkdir -p /shared/home/juan.osorio/output
+mkdir -p /shared/home/${CLUSTER_USER}/output
 
 echo "============================================================"
 echo "QA CNN — 3-CLASS TRAINING (clean_no_snow / snow / non_usable)"

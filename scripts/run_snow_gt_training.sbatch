@@ -1,21 +1,23 @@
 #!/bin/bash
 #SBATCH --job-name=snow-gt
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=08:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/snow_gt_%j.out
+#SBATCH --output=snow_gt_%j.out
 
-# Train student snow segmentation on GT annotations (FRIDA).
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+# Train student snow segmentation on GT annotations (cluster).
 # All 3 bugs fixed: freeze_encoder, negative samples, loss target.
 #
 # Usage:
-#   sbatch scripts/frida/run_snow_gt_training.sbatch
-#   MODEL=convnext sbatch scripts/frida/run_snow_gt_training.sbatch
-#   MODEL=vit_lora UNFREEZE=1 sbatch scripts/frida/run_snow_gt_training.sbatch
+#   sbatch scripts/run_snow_gt_training.sbatch
+#   MODEL=convnext sbatch scripts/run_snow_gt_training.sbatch
+#   MODEL=vit_lora UNFREEZE=1 sbatch scripts/run_snow_gt_training.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 ANN_DIR="${ANN_DIR:-${MASTER_DIR}/data/annotations}"
 MODEL="${MODEL:-mobilenet}"
@@ -28,10 +30,10 @@ PRECISION="${PRECISION:-16-mixed}"
 PRETRAIN_CKPT="${PRETRAIN_CKPT:-}"
 
 SCRIPT="${MASTER_DIR}/models/student_snow/train.py"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 # HuggingFace token
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 HF_TOKEN=""
 if [ -f "${HF_TOKEN_FILE}" ]; then
     HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
@@ -42,7 +44,7 @@ if [ ! -f "${CONTAINER}" ]; then
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 UNFREEZE_FLAG=""
 if [ "${UNFREEZE}" -eq 1 ] 2>/dev/null; then
@@ -60,7 +62,7 @@ if [ -n "${PRETRAIN_CKPT}" ]; then
 fi
 
 echo "============================================================"
-echo "STUDENT SNOW — GT TRAINING (FRIDA)"
+echo "STUDENT SNOW — GT TRAINING (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Node:        $(hostname)"

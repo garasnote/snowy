@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=multihead-dinov3
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=3-00:00:00
 #SBATCH --gres=gpu:L4:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --output=output/multihead/train_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # DINOv3 multi-head training: QA + ground seg + snow seg — one backbone.
 #
@@ -26,14 +28,14 @@ LR="${LR:-0}"                   # 0 = use model default
 NUM_WORKERS="${NUM_WORKERS:-12}"
 PRECISION="${PRECISION:-16-mixed}"
 SMOKE="${SMOKE:-0}"
-PSEUDO_GROUND="${PSEUDO_GROUND:-/shared/home/juan.osorio/master/preprocessing/segmentation/sam3_dino_output/text}"
-PSEUDO_SNOW="${PSEUDO_SNOW:-/shared/home/juan.osorio/master/preprocessing/segmentation/fusion_snow_output}"
+PSEUDO_GROUND="${PSEUDO_GROUND:-/shared/home/${CLUSTER_USER}/master/preprocessing/segmentation/sam3_dino_output/text}"
+PSEUDO_SNOW="${PSEUDO_SNOW:-/shared/home/${CLUSTER_USER}/master/preprocessing/segmentation/fusion_snow_output}"
 PSEUDO_EPOCHS="${PSEUDO_EPOCHS:-30}"
-PSEUDO_GROUND_CACHE="${PSEUDO_GROUND_CACHE:-/shared/home/juan.osorio/master/models/multi_head/cache/pseudo_ground_valid.tsv}"
-PSEUDO_SNOW_CACHE="${PSEUDO_SNOW_CACHE:-/shared/home/juan.osorio/master/models/multi_head/cache/pseudo_snow_valid.tsv}"
+PSEUDO_GROUND_CACHE="${PSEUDO_GROUND_CACHE:-/shared/home/${CLUSTER_USER}/master/models/multi_head/cache/pseudo_ground_valid.tsv}"
+PSEUDO_SNOW_CACHE="${PSEUDO_SNOW_CACHE:-/shared/home/${CLUSTER_USER}/master/models/multi_head/cache/pseudo_snow_valid.tsv}"
 SKIP_PSEUDO_CKPT="${SKIP_PSEUDO_CKPT:-}"   # set to a pseudo_phase1.pt path to skip Phase 1 entirely
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 SCRIPT_PATH="${MASTER_DIR}/models/multi_head/train_multihead.py"
 MLFLOW_DIR="${HOME}/mlruns"
 
@@ -86,7 +88,7 @@ srun \
   --container-image=${SNOW_CONTAINER_IMAGE} \
   --container-mounts=${PWD}:${PWD},/shared:/shared \
   --container-workdir=${MASTER_DIR} \
-  --export=ALL,HF_TOKEN=$(cat /shared/home/juan.osorio/.hf_token) \
+  --export=ALL,HF_TOKEN=$(cat /shared/home/${CLUSTER_USER}/.hf_token) \
   bash -c "
     set -e
     echo 'Started at \$(date)'

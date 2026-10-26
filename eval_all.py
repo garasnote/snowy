@@ -360,6 +360,44 @@ def eval_multihead_task(gt_masks, task, args, ckpt_path=None, label=None):
     return metrics
 
 
+def heldout_split(gt_masks, label="GT", fraction=0.2, gap_days=1):
+    """Keep the last `fraction` of each camera's dates, with a gap after the cutoff.
+
+    The remaining frames were in the training split, so scoring them measures
+    memorisation. Every table in the paper is scored on what this returns.
+    """
+    import re
+    from datetime import date
+
+    def _extract_date(stem):
+        m = re.search(r"(\d{4})(\d{2})(\d{2})", stem)
+        return date(int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else date(2000, 1, 1)
+
+    by_cam = {}
+    for (cam, stem) in gt_masks:
+        by_cam.setdefault(cam, []).append(stem)
+
+    keep = set()
+    for cam, stems in sorted(by_cam.items()):
+        ordered = sorted(stems, key=_extract_date)
+        dates = sorted(set(_extract_date(s) for s in ordered))
+        if len(dates) < 3:
+            n = max(1, int(len(ordered) * fraction))
+            keep.update((cam, s) for s in ordered[-n:])
+            continue
+        n_days = max(1, int(len(dates) * fraction))
+        gap = min(gap_days, len(dates) - n_days - 1)
+        cutoff = dates[-(n_days + gap)]
+        for s in ordered:
+            d = _extract_date(s)
+            if d >= cutoff and (d - cutoff).days >= gap:
+                keep.add((cam, s))
+
+    out = {k: v for k, v in gt_masks.items() if k in keep}
+    print(f"Held-out split: {len(out)} of {len(gt_masks)} {label}")
+    return out
+
+
 def eval_ground(args):
     """Evaluate ground segmentation."""
     print("\n" + "=" * 100)
@@ -380,6 +418,7 @@ def eval_ground(args):
         if gt_json.exists():
             gt_masks.update(load_gt_masks(gt_json, cameras))
     print(f"\nLoaded {len(gt_masks)} GT masks (ground_annotations + san + heroku)")
+    gt_masks = heldout_split(gt_masks, "ground GT masks")
 
     results = {}
 
@@ -618,6 +657,55 @@ def eval_ground(args):
                 print(f"  {model_name} eval failed: {e}")
                 traceback.print_exc()
 
+    # Fine-tuned students (k-fold runs, scored on the same held-out split)
+    if "ft" in args.types:
+        print("\n--- Fine-tuned Student Models ---")
+        ft_patterns = {
+            "mobilenet": "finetune_mobilenet_kfold_*",
+            "efficientnet": "finetune_efficientnet_kfold_*",
+            "dinov2_base": "finetune_dinov2_base_kfold_*",
+            "dinov2_large": "finetune_dinov2_large_kfold_*",
+            "dinov3_base": "finetune_dinov3_base_kfold_*",
+        }
+        for model_name, pattern in ft_patterns.items():
+            ckpt_path = pick_newest_run_ckpt("models/student_ground/checkpoints", pattern)
+            if ckpt_path is None:
+                print(f"  {model_name}: no ft checkpoint found")
+                continue
+            try:
+                from student_ground.models import build_model
+                from student_ground.configs import get_config
+                checkpoint = torch.load(ckpt_path, map_location=args.device, weights_only=False)
+                variant = checkpoint.get("hyper_parameters", {}).get("model_variant", model_name)
+                model = build_model(variant)
+                state_dict = {k.replace("model.", ""): v for k, v in checkpoint["state_dict"].items() if k.startswith("model.")}
+                model.load_state_dict(state_dict, strict=False)
+                model = model.to(args.device).eval()
+
+                cfg = get_config(variant)
+                input_size = cfg.get("input_size", 512)
+                evaluator = Evaluator(args.device)
+                count = 0
+                for (camera, stem), target in tqdm(gt_masks.items(), desc=f"  {model_name}_ft", leave=False):
+                    img_path = data_dir / camera / f"{stem}.jpg"
+                    if not img_path.exists():
+                        continue
+                    img = np.array(Image.open(img_path).convert("RGB").resize((input_size, input_size)))
+                    with torch.no_grad():
+                        logits = model(img_to_tensor(img).to(args.device))
+                        pred = (torch.sigmoid(logits) > 0.5).long().squeeze(1).cpu().numpy()[0]
+                    evaluator.update(pred, target)
+                    count += 1
+
+                if count > 0:
+                    metrics = evaluator.compute()
+                    results[f"{model_name}_ft"] = metrics
+                    print(f"  {model_name}_ft: IoU={metrics['iou']:.4f}, Dice={metrics['dice']:.4f} ({ckpt_path.parent.name}, {count} frames)")
+            except Exception as e:
+                import traceback
+                print(f"  {model_name} ft failed: {e}")
+                traceback.print_exc()
+
     # OOD (out-of-distribution) — held-out cameras, best kfold per model
     if "students_ood" in args.types:
         print("\n--- Student Models OOD (pseudo-label maj3, CM00054/CM00071/CM00115) ---")
@@ -817,39 +905,7 @@ def eval_snow(args):
 
     print(f"\nLoaded {len(gt_masks)} GT snow masks")
 
-    # Optionally restrict to val split only (reproduces training val IoU)
-    if getattr(args, "val_only", False):
-        import re
-        from datetime import date
-
-        def _extract_date(stem):
-            m = re.search(r"(\d{4})(\d{2})(\d{2})", stem)
-            return date(int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else date(2000, 1, 1)
-
-        by_cam = {}
-        for (cam, stem) in gt_masks:
-            by_cam.setdefault(cam, []).append(stem)
-
-        val_set = set()
-        val_fraction, gap_days = 0.2, 1
-        for cam, stems in sorted(by_cam.items()):
-            sorted_s = sorted(stems, key=_extract_date)
-            unique_dates = sorted(set(_extract_date(s) for s in sorted_s))
-            if len(unique_dates) < 3:
-                n_val = max(1, int(len(sorted_s) * val_fraction))
-                for s in sorted_s[-n_val:]:
-                    val_set.add((cam, s))
-                continue
-            n_val_days = max(1, int(len(unique_dates) * val_fraction))
-            gap = min(gap_days, len(unique_dates) - n_val_days - 1)
-            cutoff = unique_dates[-(n_val_days + gap)]
-            for s in sorted_s:
-                d = _extract_date(s)
-                if d >= cutoff and (d - cutoff).days >= gap:
-                    val_set.add((cam, s))
-
-        gt_masks = {k: v for k, v in gt_masks.items() if k in val_set}
-        print(f"Val-only split: {len(gt_masks)} GT masks")
+    gt_masks = heldout_split(gt_masks, "snow GT masks")
 
     results = {}
 
@@ -886,6 +942,44 @@ def eval_snow(args):
                 metrics = evaluator.compute()
                 results[method] = metrics
                 print(f"  {method}: IoU={metrics['iou']:.4f}, Dice={metrics['dice']:.4f}")
+
+    # Ensembles
+    if "ensembles" in args.types:
+        print("\n--- Ensembles ---")
+        for threshold in [2, 3, 4, 5]:
+            for variant in ["majority", "weighted"]:
+                ensemble_dir = (output_dir / "ensemble_snow_output"
+                                / f"{variant}_{threshold}")
+                if not ensemble_dir.exists():
+                    # legacy float-suffixed dirs (majority_3.0) from older runs
+                    legacy = (output_dir / "ensemble_snow_output"
+                              / f"{variant}_{threshold}.0")
+                    if legacy.exists():
+                        ensemble_dir = legacy
+                    else:
+                        print(f"  {variant}_{threshold}: no pool at "
+                              f"{ensemble_dir} -- skipped")
+                        continue
+
+                evaluator = Evaluator(args.device)
+                count = 0
+
+                for (camera, stem), target in tqdm(
+                        gt_masks.items(), desc=f"  {variant}_{threshold}",
+                        leave=False):
+                    pred_path = ensemble_dir / camera / f"{stem}_snow.png"
+                    if not pred_path.exists():
+                        continue
+
+                    pred = np.array(Image.open(pred_path).convert("L")) > 127
+                    evaluator.update(pred, target)
+                    count += 1
+
+                if count > 0:
+                    metrics = evaluator.compute()
+                    results[f"snow_{variant}_{threshold}"] = metrics
+                    print(f"  {variant}_{threshold}: IoU={metrics['iou']:.4f}, "
+                          f"Dice={metrics['dice']:.4f} ({count} frames)")
 
     # Baselines
     if "baselines" in args.types:
@@ -2956,7 +3050,6 @@ def main():
                         choices=["ground", "snow", "smoother", "qa", "ood-per-camera"])
     parser.add_argument("--types", nargs="+", default=None, help="Evaluation types")
     parser.add_argument("--breakdown", action="store_true", help="Show per-camera breakdown")
-    parser.add_argument("--val-only", action="store_true", help="Snow: evaluate on val split only")
     parser.add_argument("--multihead-ckpt", type=str, default=None,
                         help="Override checkpoint for --types multihead (default: "
                              "checkpoints/dinov3_base/pseudo_phase1.pt). Accepts a Phase 1 "

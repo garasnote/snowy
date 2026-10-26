@@ -199,7 +199,7 @@ def main():
         label = int(row.get("qa_usable", row.get("usable", row.get("label", -1))))
         if label < 0: continue
         p = img_dir / cam / f"{stem}.jpg"
-        if not p.exists(): p = img_dir / "balanced_snow" / cam / f"{stem}.jpg"
+        if not p.exists(): p = img_dir / cam / f"{stem}.jpg"
         if not p.exists(): continue
         img_paths.append(p); labels.append(label)
 

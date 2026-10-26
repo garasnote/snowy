@@ -2119,7 +2119,15 @@ class SnowPipelineViewer(QMainWindow):
             for p in [models_parent, models_dir_str]:
                 if p not in sys.path:
                     sys.path.insert(0, p)
-            from models.multi_head.train_multihead import DINOv3MultiHead
+            try:
+                from models.multi_head.train_multihead import DINOv3MultiHead
+            except ImportError:
+                QMessageBox.warning(
+                    self, "Multi-head model unavailable",
+                    "Multi-head inference is not part of this release.\n"
+                    "It is kept on the feature/multihead-fusion branch.",
+                )
+                return
 
             # Inline configs — avoids student_ground.configs import on local PC
             _MODEL_REGISTRY = {

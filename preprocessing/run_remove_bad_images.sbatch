@@ -1,10 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=bad-img-rm
-#SBATCH --partition=frida
+#SBATCH --partition=cpu
 #SBATCH --time=04:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --output=output/bad_img_rm_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Move bad images (night/dark, and corrupt/truncated) to a separate folder.
 #
@@ -15,13 +17,13 @@
 #   NO_CORRUPT_CHECK=1 sbatch run_remove_bad_images.sbatch  # skip corrupt-image check
 
 # ── configurable defaults ────────────────────────────────────────────────────
-DATA_DIR="${DATA_DIR:-/shared/home/juan.osorio/master/data}"
-OUTPUT_DIR="${OUTPUT_DIR:-/shared/home/juan.osorio/master/night_images}"
+DATA_DIR="${DATA_DIR:-/shared/home/${CLUSTER_USER}/master/data}"
+OUTPUT_DIR="${OUTPUT_DIR:-/shared/home/${CLUSTER_USER}/master/night_images}"
 MARGIN="${MARGIN:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 NO_CORRUPT_CHECK="${NO_CORRUPT_CHECK:-0}"
 
-SCRIPT_PATH="/shared/home/juan.osorio/master/preprocessing/remove_bad_images.py"
+SCRIPT_PATH="/shared/home/${CLUSTER_USER}/master/preprocessing/remove_bad_images.py"
 
 # ── container check ──────────────────────────────────────────────────────────
 if [ ! -f "${SNOW_CONTAINER_IMAGE}" ]; then
@@ -59,7 +61,7 @@ fi
 srun \
   --container-image=${SNOW_CONTAINER_IMAGE} \
   --container-mounts=${PWD}:${PWD},/shared:/shared \
-  --container-workdir=/shared/home/juan.osorio/master \
+  --container-workdir=/shared/home/${CLUSTER_USER}/master \
   --export=ALL \
   bash -c "
     set -e

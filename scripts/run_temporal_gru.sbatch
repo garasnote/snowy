@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=temporal-gru
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=04:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/temporal_gru_%j.out
+#SBATCH --output=temporal_gru_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Temporal GRU snow refinement pipeline:
 #   Step 1: Extract image features (CPU, ~10ms/image)
@@ -13,12 +15,12 @@
 #   Step 3: Train GRU temporal model
 #
 # Usage:
-#   sbatch scripts/frida/run_temporal_gru.sbatch
-#   ARCH=lstm BIDIRECTIONAL=1 sbatch scripts/frida/run_temporal_gru.sbatch
-#   SEQ_LEN=48 sbatch scripts/frida/run_temporal_gru.sbatch
-#   SKIP_FEATURES=1 sbatch scripts/frida/run_temporal_gru.sbatch
+#   sbatch scripts/run_temporal_gru.sbatch
+#   ARCH=lstm BIDIRECTIONAL=1 sbatch scripts/run_temporal_gru.sbatch
+#   SEQ_LEN=48 sbatch scripts/run_temporal_gru.sbatch
+#   SKIP_FEATURES=1 sbatch scripts/run_temporal_gru.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 SNOW_CKPT="${SNOW_CKPT:-${MASTER_DIR}/models/student_snow/checkpoints/snow_gt_mobilenet_20260509_134400/best-epoch=78-iouval_iou=0.837.ckpt}"
 SNOW_VARIANT="${SNOW_VARIANT:-mobilenet}"
@@ -39,14 +41,14 @@ SKIP_FEATURES="${SKIP_FEATURES:-0}"
 NO_IMAGE_FEATURES="${NO_IMAGE_FEATURES:-0}"
 WORKERS="${WORKERS:-8}"
 
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 NO_IMG_FLAG=""
 if [ "${NO_IMAGE_FEATURES}" -eq 1 ] 2>/dev/null; then
@@ -54,7 +56,7 @@ if [ "${NO_IMAGE_FEATURES}" -eq 1 ] 2>/dev/null; then
 fi
 
 echo "============================================================"
-echo "TEMPORAL GRU — SNOW REFINEMENT (FRIDA)"
+echo "TEMPORAL GRU — SNOW REFINEMENT (cluster)"
 echo "============================================================"
 echo "  Job ID:         ${SLURM_JOB_ID}"
 echo "  Node:           $(hostname)"

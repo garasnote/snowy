@@ -1,17 +1,19 @@
 #!/bin/bash
 #SBATCH --job-name=anomaly-collect
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=02:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/anomaly_collect_%j.out
+#SBATCH --output=anomaly_collect_%j.out
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 METHOD="${METHOD:-both}"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
 echo "ANOMALY DETECTION — COLLECT RESULTS"

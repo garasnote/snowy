@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=teacher-gaps
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=02:00:00
 #SBATCH --gres=gpu:1
 # GPU model matters here. The container's PyTorch is built for sm_50..sm_90, while
@@ -12,7 +12,9 @@
 #SBATCH --exclude=ixb1,ixb2,ixb3,ixb4,ixb5,ixb6,ixb7,ixb8
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/teacher_gaps_%j.out
+#SBATCH --output=teacher_gaps_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Fill the snow masks that five teachers never produced for annotated frames.
 #
@@ -30,8 +32,8 @@
 #   TEACHERS=clipseg sbatch run_teacher_gapfill.sbatch
 #   LIMIT=5 sbatch run_teacher_gapfill.sbatch          # gauge the rate first
 
-MASTER_DIR="${MASTER_DIR:-/shared/home/juan.osorio/master}"
-HOME_ROOT="${HOME_ROOT:-/shared/home/juan.osorio}"
+MASTER_DIR="${MASTER_DIR:-/shared/home/${CLUSTER_USER}/master}"
+HOME_ROOT="${HOME_ROOT:-/shared/home/${CLUSTER_USER}}"
 RELEASE_DIR="${RELEASE_DIR:-${MASTER_DIR}/release_check}"
 SEG_ROOT="${SEG_ROOT:-${MASTER_DIR}/preprocessing/segmentation}"
 FRAMES_DIR="${FRAMES_DIR:-${MASTER_DIR}/tools}"
@@ -42,10 +44,10 @@ DEVICE="${DEVICE:-cuda}"
 LIMIT="${LIMIT:-0}"
 # Private overlay for packages the image lacks (see the ultralytics block below).
 UL_OVERLAY="${UL_OVERLAY:-${MASTER_DIR}/ultralytics_overlay}"
-CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs}"
+CONTAINER="${SNOW_CONTAINER_IMAGE:-/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs}"
 
 DRIVER="${RELEASE_DIR}/tools/fill_teacher_gaps.py"
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 
 [ -f "${CONTAINER}" ] || { echo "ERROR: container not found at ${CONTAINER}"; exit 1; }
 [ -f "${DRIVER}" ] || {
@@ -59,7 +61,7 @@ LIMIT_FLAG=""
 
 # Optional extra import path (PY_EXTRA): set it when a teacher's package lives in
 # a site-packages that the image does not have on its own path, e.g.
-#   PY_EXTRA=/shared/home/juan.osorio/someenv/lib/python3.12/site-packages
+#   PY_EXTRA=/shared/home/${CLUSTER_USER}/someenv/lib/python3.12/site-packages
 PY_EXTRA="${PY_EXTRA:-}"
 PY_EXTRA_PART=""
 [ -n "${PY_EXTRA}" ] && PY_EXTRA_PART=":${PY_EXTRA}"
@@ -69,7 +71,7 @@ for d in ${DATA_DIRS}; do
     DATA_DIR_FLAGS="${DATA_DIR_FLAGS} --data-dir ${d}"
 done
 
-mkdir -p /shared/home/juan.osorio/output
+mkdir -p /shared/home/${CLUSTER_USER}/output
 
 # Build the inner script with the values already substituted, so the container
 # step is a plain `bash <file>` rather than a nested quoting puzzle. Inner-loop
@@ -239,7 +241,7 @@ echo "all teachers attempted"
 INNER_EOF
 
 echo "============================================================"
-echo "TEACHER GAP FILL (FRIDA)"
+echo "TEACHER GAP FILL (cluster)"
 echo "============================================================"
 echo "  Job ID:       ${SLURM_JOB_ID}"
 echo "  Node:         $(hostname)"

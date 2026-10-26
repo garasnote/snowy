@@ -1,22 +1,24 @@
 #!/bin/bash
 #SBATCH --job-name=anomaly-snow
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=12:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/anomaly_snow_%j.out
+#SBATCH --output=anomaly_snow_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Anomaly detection for snow segmentation (PatchCore + EfficientAD).
 # Step 1: prepare anomalib Folder dataset (normal=summer, anomaly=GT snow)
 # Step 2: train + evaluate per camera
 #
 # Usage:
-#   sbatch scripts/frida/run_anomaly_snow.sbatch
-#   METHOD=efficientad sbatch scripts/frida/run_anomaly_snow.sbatch
-#   CAMERA=CF00001 sbatch scripts/frida/run_anomaly_snow.sbatch
+#   sbatch scripts/run_anomaly_snow.sbatch
+#   METHOD=efficientad sbatch scripts/run_anomaly_snow.sbatch
+#   CAMERA=CF00001 sbatch scripts/run_anomaly_snow.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 ANN_DIR="${ANN_DIR:-${MASTER_DIR}/data/annotations}"
 METHOD="${METHOD:-both}"
@@ -26,14 +28,14 @@ IMG_SIZE="${IMG_SIZE:-256}"
 
 PREP_SCRIPT="${MASTER_DIR}/models/anomaly_snow/prepare_dataset.py"
 TRAIN_SCRIPT="${MASTER_DIR}/models/anomaly_snow/train_eval.py"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 CAMERA_FLAG=""
 if [ -n "${CAMERA}" ]; then
@@ -41,7 +43,7 @@ if [ -n "${CAMERA}" ]; then
 fi
 
 echo "============================================================"
-echo "ANOMALY DETECTION — SNOW SEGMENTATION (FRIDA)"
+echo "ANOMALY DETECTION — SNOW SEGMENTATION (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Node:        $(hostname)"

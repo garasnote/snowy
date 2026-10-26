@@ -318,10 +318,40 @@ def ensemble_parse_weights(weight_strings):
     return weights
 
 
+def _load_mask_like(path, shape):
+    """Load a mask PNG as a boolean array, resized (NEAREST) to `shape`. None if unusable."""
+    try:
+        if path is None or not Path(path).exists():
+            return None
+        m = np.array(Image.open(path).convert("L"))
+        if m.shape[:2] != shape:
+            m = np.array(Image.fromarray(m).resize((shape[1], shape[0]), Image.NEAREST))
+        return m > 127
+    except Exception:
+        return None
+
+
+def snow_fraction(snow_mask, ground_mask=None, valid_region=None):
+    """PSG fraction: snow-covered ground pixels over ground pixels, as a percentage.
+
+    PSG is snow on the ground the camera can see, so the denominator is the ground
+    region, not the whole frame. Falling back to the frame is for callers with no
+    ground mask.
+    """
+    if ground_mask is None:
+        return float(snow_mask.sum()) / snow_mask.size * 100
+    region = ground_mask & valid_region if valid_region is not None else ground_mask
+    n = int(region.sum())
+    if n == 0:
+        return float(snow_mask.sum()) / snow_mask.size * 100
+    return float((snow_mask & region).sum()) / n * 100
+
+
 def ensemble_process_one_image(args_tuple):
     """Load masks from all methods, vote, save results. Runs in worker process."""
-    (stem, camera, method_paths, min_votes,
-     output_dir, save_confidence, debug, method_weights) = args_tuple
+    (stem, camera, method_paths, min_votes, output_dir, save_confidence, debug,
+     method_weights, *extra) = args_tuple
+    ground_path, valid_region_path = (list(extra) + [None, None])[:2]
 
     masks = []
     weights = []
@@ -355,7 +385,19 @@ def ensemble_process_one_image(args_tuple):
 
     ensemble_mask = vote_count >= min_votes
     confidence = vote_count / max(total_weight, 1)
-    snow_pct = ensemble_mask.sum() / ensemble_mask.size * 100
+
+    # PSG is snow on the ground the camera can see, so the fraction is taken over the
+    # ground region, not over the whole frame. The frame-wide value is kept as
+    # snow_pct_frame for diagnostics and comparison against older runs.
+    snow_pct_frame = float(ensemble_mask.sum()) / ensemble_mask.size * 100
+    ground_mask = _load_mask_like(ground_path, ensemble_mask.shape)
+    valid_region = _load_mask_like(valid_region_path, ensemble_mask.shape)
+    used_ground = ground_mask is not None
+    snow_pct = snow_fraction(ensemble_mask, ground_mask, valid_region)
+    if used_ground:
+        n_ground = int((ground_mask & valid_region).sum()) if valid_region is not None else int(ground_mask.sum())
+    else:
+        n_ground = int(ensemble_mask.size)
 
     cam_out = output_dir / camera
     mask_img = Image.fromarray((ensemble_mask * 255).astype(np.uint8))
@@ -377,6 +419,9 @@ def ensemble_process_one_image(args_tuple):
         "camera": camera,
         "filename": f"{stem}.jpg",
         "snow_pct": round(snow_pct, 2),
+        "snow_pct_frame": round(snow_pct_frame, 2),
+        "ground_px": n_ground,
+        "used_ground": int(used_ground),
         "n_methods": n_methods,
         "total_weight": round(total_weight, 3),
         "unanimous_snow_pct": round(
@@ -414,6 +459,10 @@ def add_ensemble_subparser(subparsers):
                     help="Number of parallel workers")
     p.add_argument("--debug", action="store_true",
                     help="Save color-coded agreement maps")
+    p.add_argument("--ground-source", default="mobilenet_ft",
+                   help="Student model under student_ground_output/ used as the ground denominator")
+    p.add_argument("--frame-fraction", action="store_true",
+                   help="Keep the legacy frame-wide snow_pct as the reported value")
     return p
 
 
@@ -430,6 +479,16 @@ def run_ensemble(args):
     else:
         method_weights = {m: 1 for m in ensemble_build_method_dirs(base_dir).keys()}
         output_dir = output_base / f"majority_{args.min_votes}"
+
+    if getattr(args, "frame_fraction", False):
+        ground_base = None
+        print("  NOTE: --frame-fraction given; snow_pct stays frame-wide (legacy behaviour)")
+    else:
+        ground_base = base_dir / "student_ground_output" / args.ground_source
+        if not ground_base.exists():
+            print(f"  WARNING: ground source not found ({ground_base}); snow_pct falls back to frame-wide")
+            ground_base = None
+    valid_dir = base_dir / "camera_valid_regions"
 
     method_dirs = ensemble_build_method_dirs(base_dir)
 
@@ -498,10 +557,18 @@ def run_ensemble(args):
                 if stem in method_stems.get(name, set()):
                     paths[name] = d / camera / f"{stem}_snow.png"
 
+            ground_path = None
+            if ground_base is not None:
+                gp = ground_base / camera / f"{stem}_ground.png"
+                ground_path = gp if gp.exists() else None
+            vr_file = valid_dir / f"{camera}.png"
+            vr_path = vr_file if vr_file.exists() else None
+
             if len(paths) >= args.min_methods:
                 task_args.append((
                     stem, camera, paths, args.min_votes,
-                    output_dir, save_confidence, args.debug, method_weights
+                    output_dir, save_confidence, args.debug, method_weights,
+                    ground_path, vr_path
                 ))
                 matched += 1
 
@@ -526,7 +593,8 @@ def run_ensemble(args):
 
     if all_results:
         summary_path = output_dir / "ensemble_snow_summary.csv"
-        fieldnames = ["camera", "filename", "snow_pct", "n_methods",
+        fieldnames = ["camera", "filename", "snow_pct", "snow_pct_frame",
+                      "ground_px", "used_ground", "n_methods",
                       "total_weight", "unanimous_snow_pct",
                       "unanimous_nosnow_pct"]
         with open(summary_path, "w", newline="") as fh:

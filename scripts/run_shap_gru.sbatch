@@ -1,14 +1,16 @@
 #!/bin/bash
 #SBATCH --job-name=shap-gru
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=02:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --output=/shared/home/juan.osorio/output/shap_gru_%j.out
+#SBATCH --output=shap_gru_%j.out
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 srun \
   --container-image=${CONTAINER} \

@@ -1,27 +1,29 @@
 #!/bin/bash
 #SBATCH --job-name=student-ground
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:L4:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/student_ground_%j.out
+#SBATCH --output=student_ground_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Train student ground segmentation on ensemble pseudo-labels.
 #
 # Usage:
-#   sbatch scripts/frida/train_student_ground.sbatch
+#   sbatch scripts/train_student_ground.sbatch
 #
 #   # Custom ensemble / model:
-#   ENSEMBLE=majority_3 MODEL=dinov2_large sbatch scripts/frida/train_student_ground.sbatch
+#   ENSEMBLE=majority_3 MODEL=dinov2_large sbatch scripts/train_student_ground.sbatch
 #
 #   # RGBD (depth as 4th channel):
-#   DEPTH_DIR=/shared/home/juan.osorio/master/preprocessing/segmentation/depth_output/shared_depth \
-#     sbatch scripts/frida/train_student_ground.sbatch
+#   DEPTH_DIR=/shared/home/${CLUSTER_USER}/master/preprocessing/segmentation/depth_output/shared_depth \
+#     sbatch scripts/train_student_ground.sbatch
 
 MODEL="${MODEL:-mobilenet}"
 ENSEMBLE="${ENSEMBLE:-majority_3}"
-DATA_DIR="${DATA_DIR:-/shared/home/juan.osorio/master/data}"
+DATA_DIR="${DATA_DIR:-/shared/home/${CLUSTER_USER}/master/data}"
 EPOCHS="${EPOCHS:-100}"
 BATCH_SIZE="${BATCH_SIZE:-32}"
 DEPTH_DIR="${DEPTH_DIR:-}"
@@ -32,13 +34,13 @@ if [ -n "${DEPTH_DIR}" ] && [[ "${MODEL}" != *_rgbd ]]; then
 fi
 
 # HuggingFace token (required for gated models like DINOv3)
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 if [ -f "${HF_TOKEN_FILE}" ]; then
     HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
     export HF_TOKEN
 fi
 
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 if [ -z "${CONTAINER}" ] || [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container image not found at ${CONTAINER}"
     echo "Set SNOW_CONTAINER_IMAGE in your environment."
@@ -77,7 +79,7 @@ fi
 srun \
   --container-image=${CONTAINER} \
   --container-mounts=/shared:/shared \
-  --container-workdir=/shared/home/juan.osorio/master \
+  --container-workdir=/shared/home/${CLUSTER_USER}/master \
   bash -c "
     set -e
     export HF_TOKEN='${HF_TOKEN}'

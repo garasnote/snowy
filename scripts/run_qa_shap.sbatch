@@ -4,20 +4,22 @@
 #SBATCH --time=00:30:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
-#SBATCH --output=/shared/home/juan.osorio/output/qa_shap_%j.out
+#SBATCH --output=qa_shap_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Load saved QA model + compute SHAP feature importances.
 # No training — just analysis on existing pickle.
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/cpu_env.sqfs"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/cpu_env.sqfs"
 
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 srun \
   --container-image=${CONTAINER} \

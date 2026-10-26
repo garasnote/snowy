@@ -1,17 +1,19 @@
 #!/bin/bash
 #SBATCH --job-name=subspace-eval
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=01:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --output=/shared/home/juan.osorio/output/subspace_ad_eval_%j.out
+#SBATCH --output=subspace_ad_eval_%j.out
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 ANN_DIR="${ANN_DIR:-${MASTER_DIR}/data/annotations}"
 EVAL_SCRIPT="${MASTER_DIR}/models/subspace_ad/eval_iou.py"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 srun \
   --container-image=${CONTAINER} \

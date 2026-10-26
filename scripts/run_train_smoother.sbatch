@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=smoother-train
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=4:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --output=/shared/home/juan.osorio/output/smoother_%j.out
+#SBATCH --output=smoother_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Train temporal smoother (GRU/LSTM, uni/bi).
 # Usage:
@@ -13,8 +15,8 @@
 #   ARCH=lstm BI=1 sbatch run_train_smoother.sbatch          # bi-LSTM
 #   ARCH=gru  BI=1 sbatch run_train_smoother.sbatch          # bi-GRU
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 ARCH="${ARCH:-gru}"
 BI="${BI:-0}"

@@ -11,6 +11,7 @@ __pycache__/
 *.png
 *.jpg
 *.jpeg
+*.pdf
 !preprocessing/segmentation/camera_valid_regions/*.png
 output/
 checkpoints/
@@ -20,11 +21,12 @@ cache/
 # fusion pseudo-label outputs live here, not in the repository.
 /workspace/
 
-# Local safety copies taken before destructive retrains; never shipped.
-.hermes_backups/
 
-# Real ARSO webcam imagery + annotations — redistribution rights not
-# confirmed for the images (see README "What's not here"). Blanket-ignored
-# regardless of file type, not just the *.jpg/*.png rules above, since this
-# also covers annotation JSON/meteo files placed here for local smoke-testing.
+# Deployment build artefacts and per-frame score caches (reports are kept).
+deploy/space_bundle/
+deploy/viz/
+deploy/*.jsonl
+
+# Imagery, annotations and meteo tables are distributed with the Zenodo record
+# (10.5281/zenodo.23386293). Blanket-ignored whatever the file type.
 /data/

@@ -4,23 +4,25 @@
 #SBATCH --time=01:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --output=/shared/home/juan.osorio/output/qa_train_%j.out
+#SBATCH --output=qa_train_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Train HistGradientBoosting QA classifier.
 # CPU-only — no GPU needed. Produces qa_gradboost.pkl for predict_qa.py.
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/cpu_env.sqfs"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/cpu_env.sqfs"
 
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
-echo "QA CLASSIFIER — HISTGRADIENTBOOSTING (FRIDA)"
+echo "QA CLASSIFIER — HISTGRADIENTBOOSTING (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Container:   ${CONTAINER}"

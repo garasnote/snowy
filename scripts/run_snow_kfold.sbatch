@@ -1,21 +1,23 @@
 #!/bin/bash
 #SBATCH --job-name=snow-kfold
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/snow_kfold_%j.out
+#SBATCH --output=snow_kfold_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # K-fold CV finetuning on GT snow annotations (5-fold stratified).
 # Initializes from pseudo-label checkpoint (majority_3), trains all 5 folds sequentially.
 #
 # Usage:
-#   MODEL=mobilenet PRETRAIN_CKPT=<path> sbatch scripts/frida/run_snow_kfold.sbatch
-#   MODEL=convnext  PRETRAIN_CKPT=<path> sbatch scripts/frida/run_snow_kfold.sbatch
-#   MODEL=vit_lora  PRETRAIN_CKPT=<path> sbatch scripts/frida/run_snow_kfold.sbatch
+#   MODEL=mobilenet PRETRAIN_CKPT=<path> sbatch scripts/run_snow_kfold.sbatch
+#   MODEL=convnext  PRETRAIN_CKPT=<path> sbatch scripts/run_snow_kfold.sbatch
+#   MODEL=vit_lora  PRETRAIN_CKPT=<path> sbatch scripts/run_snow_kfold.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 ANN_DIR="${ANN_DIR:-${MASTER_DIR}/data/annotations}"
 MODEL="${MODEL:-mobilenet}"
@@ -28,9 +30,9 @@ PRETRAIN_CKPT="${PRETRAIN_CKPT:-}"
 KFOLD_K="${KFOLD_K:-5}"
 
 SCRIPT="${MASTER_DIR}/models/student_snow/train.py"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 HF_TOKEN=""
 if [ -f "${HF_TOKEN_FILE}" ]; then
     HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
@@ -41,7 +43,7 @@ if [ ! -f "${CONTAINER}" ]; then
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 UNFREEZE_FLAG=""
 if [ "${UNFREEZE}" -eq 1 ] 2>/dev/null; then
@@ -54,7 +56,7 @@ if [ -n "${PRETRAIN_CKPT}" ]; then
 fi
 
 echo "============================================================"
-echo "SNOW K-FOLD CV — GT Finetuning (FRIDA)"
+echo "SNOW K-FOLD CV — GT Finetuning (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Model:       ${MODEL}"

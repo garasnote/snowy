@@ -4,17 +4,19 @@
 #SBATCH --time=04:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --output=/shared/home/juan.osorio/output/hsv_snow_%j.out
+#SBATCH --output=hsv_snow_%j.out
 
-# HSV white-pixel snow baseline on FRIDA. CPU-only (no GPU needed).
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+# HSV white-pixel snow baseline on the cluster. CPU-only (no GPU needed).
 #
 # Usage:
-#   sbatch scripts/frida/run_hsv_baseline.sbatch
-#   CAMERAS="CF00001 CM00009" sbatch scripts/frida/run_hsv_baseline.sbatch
-#   GROUND_MASK_DIR=/shared/home/juan.osorio/master/preprocessing/segmentation/student_ground_output/mobilenet_ft \
-#     sbatch scripts/frida/run_hsv_baseline.sbatch
+#   sbatch scripts/run_hsv_baseline.sbatch
+#   CAMERAS="CF00001 CM00009" sbatch scripts/run_hsv_baseline.sbatch
+#   GROUND_MASK_DIR=/shared/home/${CLUSTER_USER}/master/preprocessing/segmentation/student_ground_output/mobilenet_ft \
+#     sbatch scripts/run_hsv_baseline.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 OUTPUT_DIR="${OUTPUT_DIR:-${MASTER_DIR}/preprocessing/segmentation/hsv_snow_output_mobilenet_ft}"
 CAMERAS="${CAMERAS:-}"
@@ -24,17 +26,17 @@ GROUND_MASK_DIR="${GROUND_MASK_DIR:-${MASTER_DIR}/preprocessing/segmentation/stu
 
 SCRIPT="${MASTER_DIR}/segmentation/snow_utils.py"
 
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 if [ -z "${CONTAINER}" ] || [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container image not found at ${CONTAINER}"
     echo "Set SNOW_CONTAINER_IMAGE in your environment."
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
-echo "HSV — SNOW BASELINE (FRIDA)"
+echo "HSV — SNOW BASELINE (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Node:        $(hostname)"

@@ -4,20 +4,22 @@
 #SBATCH --time=04:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --output=/shared/home/juan.osorio/output/img_stats_%j.out
+#SBATCH --output=img_stats_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Recompute image statistics + regenerate snow comparison plots.
 # Only active 9 cameras (excludes CM00006, CM00024, CM00068).
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 STATS_DIR="${MASTER_DIR}/preprocessing/statistics"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/cpu_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/cpu_env.sqfs"
 
 CAMERAS="CF00001 CM00009 CM00014 CM00070 CM00075 CM00080 CM00102 CM00108 CM00112"
 PATTERN="{$(echo $CAMERAS | tr ' ' ',')}/*.jpg"
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
 echo "IMAGE STATISTICS — RECOMPUTE + PLOTS"

@@ -481,7 +481,7 @@ def main():
     parser.add_argument("--ann-dir", type=str,
                         default=str(_ROOT / "data" / "annotations"))
     parser.add_argument("--img-dir", type=str,
-                        default=str(_ROOT / "data" / "balanced_snow"))
+                        default=str(_ROOT / "data"))
     parser.add_argument("--meteo", type=str,
                         default=str(_ROOT / "data" / "meteo_hourly.csv"))
     parser.add_argument("--output-dir", type=str,

@@ -4,12 +4,14 @@
 #SBATCH --time=04:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --output=/shared/home/juan.osorio/output/baseline_ground_%j.out
+#SBATCH --output=baseline_ground_%j.out
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/cpu_env.sqfs"
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
-mkdir -p "/shared/home/juan.osorio/output"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/cpu_env.sqfs"
+
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
 echo "BASELINE GROUND SEGMENTATION (fixed + sobel)"

@@ -1,11 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=hp-ground
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/hp_ground_%j.out
+#SBATCH --output=hp_ground_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Optuna TPE hyperparameter search for Ground MobileNet (majority-3 pseudo-labels).
 # Single job — Optuna runs trials sequentially.
@@ -15,17 +17,17 @@
 # 50 TPE trials covers the space far better than 192 grid configs.
 #
 # Usage:
-#   sbatch scripts/frida/run_hp_ground.sbatch
+#   sbatch scripts/run_hp_ground.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
 echo "GROUND MOBILENET HP SEARCH — Optuna TPE (majority-3)"

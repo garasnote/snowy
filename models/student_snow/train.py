@@ -106,6 +106,45 @@ def discover_snow_samples(ensemble_dir, data_dir, cameras=None, depth_dir=None):
     return samples
 
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+# Ground denominator for the PSG fraction: the segmented ground, clipped to the camera's
+# trusted region when one exists. Both live under preprocessing/segmentation/.
+GROUND_DIR = _REPO_ROOT / "preprocessing" / "segmentation" / "student_ground_output" / "mobilenet_ft"
+VALID_REGION_DIR = _REPO_ROOT / "preprocessing" / "segmentation" / "camera_valid_regions"
+
+
+def snow_pct_on_ground(mask_arr, mask_path):
+    """Snow percentage on the ground the camera can see, not on the whole frame.
+
+    Falls back to the frame-wide fraction when no ground mask exists for that frame,
+    so cameras that never went through the ground pass keep working.
+    """
+    from PIL import Image
+    snow = mask_arr > 127
+    try:
+        camera = Path(mask_path).parent.name
+        stem = Path(mask_path).name.replace("_snow.png", "").replace(".png", "")
+        gpath = GROUND_DIR / camera / f"{stem}_ground.png"
+        if not gpath.exists():
+            return float(snow.sum()) / snow.size * 100
+        g = np.array(Image.open(gpath).convert("L"))
+        if g.shape[:2] != snow.shape:
+            g = np.array(Image.fromarray(g).resize((snow.shape[1], snow.shape[0]), Image.NEAREST))
+        region = g > 127
+        vr = VALID_REGION_DIR / f"{camera}.png"
+        if vr.exists():
+            v = np.array(Image.open(vr).convert("L"))
+            if v.shape[:2] != snow.shape:
+                v = np.array(Image.fromarray(v).resize((snow.shape[1], snow.shape[0]), Image.NEAREST))
+            region = region & (v > 127)
+        n = int(region.sum())
+        if n == 0:
+            return float(snow.sum()) / snow.size * 100
+        return float((snow & region).sum()) / n * 100
+    except Exception:
+        return float(snow.sum()) / snow.size * 100
+
+
 def filter_by_snow_coverage(samples, min_snow_pct=1.0, seed=42):
     """Split samples into snow/no-snow based on mask pixel coverage.
 
@@ -118,7 +157,7 @@ def filter_by_snow_coverage(samples, min_snow_pct=1.0, seed=42):
         mask_path = s[2]  # (img, conf, mask, depth)
         try:
             m = np.array(Image.open(mask_path).convert("L"))
-            pct = (m > 127).sum() / m.size * 100
+            pct = snow_pct_on_ground(m, mask_path)
         except Exception:
             continue
         if pct >= min_snow_pct:

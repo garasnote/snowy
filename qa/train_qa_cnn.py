@@ -154,7 +154,7 @@ def main():
     parser.add_argument("--features-csv", type=str,
                         default=str(_HERE / "checkpoints" / "qa_features.csv"))
     parser.add_argument("--img-dir", type=str,
-                        default=str(_ROOT / "data" / "balanced_snow"))
+                        default=str(_ROOT / "data"))
     parser.add_argument("--output-dir", type=str,
                         default=str(_HERE / "checkpoints"))
     parser.add_argument("--input-size", type=int, default=128)
@@ -163,7 +163,13 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--channels", type=str, default="32,64,128")
+    parser.add_argument("--exclude-cameras", type=str,
+                        default="CM00054,CM00067,CM00071,CM00115",
+                        help="Cameras never used for QA-gate training. Defaults to the four "
+                             "held-out OOD cameras of the paper: training on them invalidates "
+                             "every out-of-distribution claim. Pass '' to disable.")
     args = parser.parse_args()
+    excluded = {c.strip() for c in args.exclude_cameras.split(",") if c.strip()}
 
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -182,15 +188,22 @@ def main():
     counts = {c: int((df["label3"] == c).sum()) for c in range(NUM_CLASSES)}
     print(f"Samples: {len(df)}  " + "  ".join(f"{CLASS_NAMES[c]}={counts[c]}" for c in range(NUM_CLASSES)))
 
+    if excluded:
+        _before = len(df)
+        df = df[~df["camera"].isin(excluded)].reset_index(drop=True)
+        print(f"  Excluded cameras {sorted(excluded)}: {_before} -> {len(df)} frames")
+
     # Resolve image paths
     img_paths = []
     labels = []
+    cams = []
     missing = 0
     for _, row in df.iterrows():
         p = img_dir / row["camera"] / f"{row['stem']}.jpg"
         if p.exists():
             img_paths.append(str(p))
             labels.append(int(row["label3"]))
+            cams.append(row["camera"])
         else:
             missing += 1
     if missing:
@@ -305,6 +318,7 @@ def main():
 
     # Also save as regular checkpoint with metadata
     ckpt_path = output_dir / "qa_cnn.ckpt"
+    trained_on = {c: int(sum(1 for x in cams if x == c)) for c in sorted(set(cams))}
     torch.save({
         "state_dict": model.state_dict(),
         "input_size": args.input_size,
@@ -314,7 +328,12 @@ def main():
         "auroc_cv": auroc,
         "f1_cv": f1,
         "n_params": sum(p.numel() for p in model.parameters()),
+        "features_csv": str(args.features_csv),
+        "excluded_cameras": sorted(excluded),
+        "trained_on": trained_on,
+        "n_frames": len(labels),
     }, ckpt_path)
+    print("  Trained on: " + "  ".join(f"{k}={v}" for k, v in trained_on.items()))
     print(f"Checkpoint saved to {ckpt_path}")
 
     n_params = sum(p.numel() for p in model.parameters())

@@ -1,19 +1,21 @@
 #!/bin/bash
 #SBATCH --job-name=gru-viz
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=04:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --output=/shared/home/juan.osorio/output/gru_viz_%j.out
+#SBATCH --output=gru_viz_%j.out
+
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
 
 # Generate animations + calendar heatmaps from trained GRU smoother.
 #
 # Usage:
-#   CKPT=models/temporal_snow/checkpoints/<run>/best-*.ckpt sbatch scripts/frida/run_gru_visualizations.sbatch
-#   CKPT=... CAMERAS="CM00014 CF00001" sbatch scripts/frida/run_gru_visualizations.sbatch
+#   CKPT=models/temporal_snow/checkpoints/<run>/best-*.ckpt sbatch scripts/run_gru_visualizations.sbatch
+#   CKPT=... CAMERAS="CM00014 CF00001" sbatch scripts/run_gru_visualizations.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 CKPT="${CKPT:?ERROR: set CKPT=path/to/smoother/checkpoint.ckpt}"
 CSV="${CSV:-${MASTER_DIR}/analysis/snow_timeseries.csv}"
 IMG_DIR="${IMG_DIR:-${MASTER_DIR}/data}"
@@ -22,14 +24,14 @@ CAMERAS="${CAMERAS:-}"
 FPS="${FPS:-4}"
 MAX_PERIODS="${MAX_PERIODS:-3}"
 
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 
 if [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container not found at ${CONTAINER}"
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 CAM_FLAG=""
 if [ -n "${CAMERAS}" ]; then
@@ -37,7 +39,7 @@ if [ -n "${CAMERAS}" ]; then
 fi
 
 echo "============================================================"
-echo "GRU SMOOTHER — VISUALIZATIONS (FRIDA)"
+echo "GRU SMOOTHER — VISUALIZATIONS (cluster)"
 echo "============================================================"
 echo "  Job ID:     ${SLURM_JOB_ID}"
 echo "  Checkpoint: ${CKPT}"

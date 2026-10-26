@@ -7,6 +7,8 @@
 #SBATCH --mem=24G
 #SBATCH --output=output/multihead/hp_%j.out
 
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
 # Optuna TPE hyperparameter search for DINOv3 multi-head model.
 # Each trial trains with EarlyStopping; Shapley importances logged at end.
 #
@@ -21,9 +23,9 @@ MAX_EPOCHS="${MAX_EPOCHS:-100}"
 NUM_WORKERS="${NUM_WORKERS:-0}"
 STUDY_NAME="${STUDY_NAME:-multihead_tpe}"
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 SCRIPT_PATH="${MASTER_DIR}/models/multi_head/hp_search_multihead.py"
-MLFLOW_DIR="/shared/home/juan.osorio/mlruns"
+MLFLOW_DIR="/shared/home/${CLUSTER_USER}/mlruns"
 DB_PATH="${MASTER_DIR}/models/multi_head/checkpoints/hp_search/optuna.db"
 
 mkdir -p output/multihead
@@ -48,7 +50,7 @@ srun \
   --container-image=${SNOW_CONTAINER_IMAGE} \
   --container-mounts=${PWD}:${PWD},/shared:/shared \
   --container-workdir=${MASTER_DIR} \
-  --export=ALL,HF_TOKEN=$(cat /shared/home/juan.osorio/.hf_token) \
+  --export=ALL,HF_TOKEN=$(cat /shared/home/${CLUSTER_USER}/.hf_token) \
   bash -c "
     set -e
     echo 'Started at \$(date)'

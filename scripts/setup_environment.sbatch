@@ -6,7 +6,7 @@
 # Not written for a generic HPC layout — invoke from the parent directory
 # of this repo (so "master/requirements.txt" below resolves), with
 # SNOW_CONTAINER_IMAGE set to where the built image should be saved.
-# Outside FRIDA (Slurm + Pyxis/enroot), use the repo's Dockerfile instead —
+# Outside the cluster (Slurm + Pyxis/enroot), use the repo's Dockerfile instead —
 # it mirrors this recipe exactly and builds with plain `docker build`.
 
 echo "========================================="

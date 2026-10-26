@@ -736,6 +736,7 @@ class LoRALinear(nn.Module):
         return self.frozen(x) + self.up(self.down(x)) * self.scaling
 
 
+
 # ── Factory ──────────────────────────────────────────────────────────────────
 
 def build_model(variant="dinov2_base"):

@@ -1,22 +1,24 @@
 #!/bin/bash
 #SBATCH --job-name=sam3-snow
-#SBATCH --partition=frida
+#SBATCH --partition=gpu
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --output=/shared/home/juan.osorio/output/sam3_snow_%j.out
+#SBATCH --output=sam3_snow_%j.out
 
-# SAM3 text-prompted snow segmentation on FRIDA.
+CLUSTER_USER="${CLUSTER_USER:-$(whoami)}"
+
+# SAM3 text-prompted snow segmentation on the cluster.
 #
 # Usage:
-#   sbatch scripts/frida/run_sam3_snow.sbatch
-#   CAMERAS="CF00001 CM00009" sbatch scripts/frida/run_sam3_snow.sbatch
-#   SAMPLE=50 DEBUG=1 sbatch scripts/frida/run_sam3_snow.sbatch
-#   GROUND_MASK_DIR=/shared/home/juan.osorio/master/preprocessing/segmentation/student_ground_output/mobilenet_ft \
-#     sbatch scripts/frida/run_sam3_snow.sbatch
+#   sbatch scripts/run_sam3_snow.sbatch
+#   CAMERAS="CF00001 CM00009" sbatch scripts/run_sam3_snow.sbatch
+#   SAMPLE=50 DEBUG=1 sbatch scripts/run_sam3_snow.sbatch
+#   GROUND_MASK_DIR=/shared/home/${CLUSTER_USER}/master/preprocessing/segmentation/student_ground_output/mobilenet_ft \
+#     sbatch scripts/run_sam3_snow.sbatch
 
-MASTER_DIR="/shared/home/juan.osorio/master"
+MASTER_DIR="/shared/home/${CLUSTER_USER}/master"
 DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 OUTPUT_DIR="${OUTPUT_DIR:-${MASTER_DIR}/preprocessing/segmentation/sam3_snow_output}"
 CAMERAS="${CAMERAS:-}"
@@ -29,24 +31,24 @@ NO_SKY="${NO_SKY:-0}"
 SCRIPT="${MASTER_DIR}/segmentation/snow_teachers.py"
 
 # HuggingFace token
-HF_TOKEN_FILE="/shared/home/juan.osorio/.hf_token"
+HF_TOKEN_FILE="/shared/home/${CLUSTER_USER}/.hf_token"
 HF_TOKEN=""
 if [ -f "${HF_TOKEN_FILE}" ]; then
     HF_TOKEN=$(cat "${HF_TOKEN_FILE}" | tr -d '[:space:]')
     echo "  HF token:    loaded (${#HF_TOKEN} chars)"
 fi
 
-CONTAINER="/shared/workspace/lkm/juan.osorio/container/snow_detector_env.sqfs"
+CONTAINER="/shared/workspace/lkm/${CLUSTER_USER}/container/snow_detector_env.sqfs"
 if [ -z "${CONTAINER}" ] || [ ! -f "${CONTAINER}" ]; then
     echo "ERROR: Container image not found at ${CONTAINER}"
     echo "Set SNOW_CONTAINER_IMAGE in your environment."
     exit 1
 fi
 
-mkdir -p "/shared/home/juan.osorio/output"
+mkdir -p "/shared/home/${CLUSTER_USER}/output"
 
 echo "============================================================"
-echo "SAM3 — SNOW SEGMENTATION (FRIDA)"
+echo "SAM3 — SNOW SEGMENTATION (cluster)"
 echo "============================================================"
 echo "  Job ID:      ${SLURM_JOB_ID}"
 echo "  Node:        $(hostname)"
