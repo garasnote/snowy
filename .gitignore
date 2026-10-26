@@ -30,3 +30,6 @@ deploy/*.jsonl
 # Imagery, annotations and meteo tables are distributed with the Zenodo record
 # (10.5281/zenodo.23386293). Blanket-ignored whatever the file type.
 /data/
+deploy/*.json
+*.kate-swp
+*.swp

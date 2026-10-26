@@ -211,9 +211,7 @@ DEVICE=cuda bash tools/reproduce_paper.sh           # the setup the paper used
 TASKS="snow ground" bash tools/reproduce_paper.sh   # a subset of tasks
 ```
 
-It checks the prerequisites and stops if one is missing. Then it runs snow, ground, smoother, qa and
-ood-per-camera, and compares each logged number with the manuscript value,
-counting a pass as within 0.005. Logs go to `workspace/repro/`.
+It checks the prerequisites and stops if one is missing. Then it runs snow, ground, smoother, qa and ood-per-camera, and compares each logged number with the manuscript value. Logs go to `workspace/repro/`.
 
 ---
 
