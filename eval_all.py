@@ -291,75 +291,6 @@ def load_gt_masks_all(cameras, label_class=None):
     return merged
 
 
-def eval_multihead_task(gt_masks, task, args, ckpt_path=None, label=None):
-    """Evaluate a DINOv3MultiHead checkpoint on one task (ground/snow).
-
-    ckpt_path: a pseudo_phase1.pt (dict w/ 'ground_decoder'/'snow_decoder'
-    state dicts only, backbone stays pretrained-frozen — Phase 1 output) or
-    a full Lightning .ckpt (Phase 2 GT-finetuned). Both load fine since the
-    decoder state dict keys are the same shape either way.
-    Returns a metrics dict, or None if nothing could be evaluated.
-    """
-    from multi_head.train_multihead import DINOv3MultiHead
-    from student_ground.configs import MODEL_REGISTRY
-
-    if ckpt_path is None:
-        ckpt_path = Path("models/multi_head/checkpoints/dinov3_base/pseudo_phase1.pt")
-    ckpt_path = Path(ckpt_path)
-    if not ckpt_path.exists():
-        print(f"  multihead ({task}): checkpoint not found: {ckpt_path}")
-        return None
-
-    variant = "dinov3_base"
-    model = DINOv3MultiHead(variant).to(args.device)
-    model.eval()
-
-    state = torch.load(ckpt_path, map_location=args.device, weights_only=False)
-    if "ground_decoder" in state and "snow_decoder" in state:
-        # Phase-1-only pseudolabel checkpoint: just the two decoder heads.
-        model.ground_decoder.load_state_dict(state["ground_decoder"])
-        model.snow_decoder.load_state_dict(state["snow_decoder"])
-    else:
-        # Full Lightning checkpoint (Phase 2 GT finetune).
-        sd = {k.replace("model.", ""): v for k, v in state["state_dict"].items() if k.startswith("model.")}
-        model.load_state_dict(sd, strict=False)
-
-    input_size = MODEL_REGISTRY[variant]["input_size"]
-    data_dir = Path("data")
-
-    evaluator = Evaluator(args.device)
-    count = 0
-    label = label or f"multihead_{task}"
-
-    for (camera, stem), target in tqdm(gt_masks.items(), desc=f"  {label}", leave=False):
-        img_path = data_dir / camera / f"{stem}.jpg"
-        if not img_path.exists():
-            img_path = data_dir / f"_EXCLUDED_{camera}" / f"{stem}.jpg"
-        if not img_path.exists():
-            continue
-
-        img = np.array(Image.open(img_path).convert("RGB").resize((input_size, input_size)))
-        img_t = img_to_tensor(img)
-
-        with torch.no_grad():
-            logits = model.forward_seg(img_t.to(args.device), task=task)
-            pred = (torch.sigmoid(logits) > 0.5).long().squeeze(1).cpu().numpy()[0]
-
-        target_resized = np.array(
-            Image.fromarray(target).resize((input_size, input_size), Image.NEAREST)
-        )
-        evaluator.update(pred.astype(np.float32), target_resized)
-        count += 1
-
-    if count == 0:
-        print(f"  multihead ({task}): no images matched GT masks")
-        return None
-
-    metrics = evaluator.compute()
-    print(f"  {label}: IoU={metrics['iou']:.4f}, Dice={metrics['dice']:.4f}  (ckpt: {ckpt_path.name}, n={count})")
-    return metrics
-
-
 def heldout_split(gt_masks, label="GT", fraction=0.2, gap_days=1):
     """Keep the last `fraction` of each camera's dates, with a gap after the cutoff.
 
@@ -829,32 +760,6 @@ def eval_ground(args):
                     print(f"  {model_name} OOD failed: {e}")
                     traceback.print_exc()
 
-    # DINOv3 multihead (Phase 1 pseudolabel decoder, no GT finetune)
-    if "multihead" in args.types:
-        print("\n--- Multihead (DINOv3MultiHead, Phase 1 pseudolabel) ---")
-        try:
-            metrics = eval_multihead_task(gt_masks, "ground", args, ckpt_path=args.multihead_ckpt, label="multihead_ground_pseudo")
-            if metrics is not None:
-                results["multihead_ground_pseudo"] = metrics
-        except Exception as e:
-            import traceback
-            print(f"  multihead ground eval failed: {e}")
-            traceback.print_exc()
-
-        print("\n--- Multihead OOD (Held-out Cameras: CM00054, CM00071, CM00115) ---")
-        ood_cameras = ["CM00054", "CM00067", "CM00071", "CM00115"]
-        ood_masks = load_gt_masks_all(ood_cameras, label_class="Ground Mano")
-        print(f"  Loaded {len(ood_masks)} OOD GT masks")
-        if ood_masks:
-            try:
-                metrics = eval_multihead_task(ood_masks, "ground", args, ckpt_path=args.multihead_ckpt, label="multihead_ground_pseudo_ood")
-                if metrics is not None:
-                    results["multihead_ground_pseudo_ood"] = metrics
-            except Exception as e:
-                import traceback
-                print(f"  multihead ground OOD eval failed: {e}")
-                traceback.print_exc()
-
     # Summary
     print("\n" + "=" * 100)
     print("SUMMARY (sorted by IoU)")
@@ -1230,7 +1135,7 @@ def eval_snow(args):
         snow_ckpts = {
             "mobilenet": pick_best_ckpt("models/student_snow/checkpoints/snow_gt_mobilenet_20260522_052052"),
             "convnext":  pick_best_ckpt("models/student_snow/checkpoints/snow_gt_convnext_unfrozen"),
-            "vit_lora":  pick_best_ckpt("models/student_snow/checkpoints/snow_gt_vit_lora_unfrozen"),
+            "vit_lora":  pick_newest_run_ckpt("models/student_snow/checkpoints", "snow_gt_vit_lora_*"),
         }
 
         for model_name, ckpt_path in snow_ckpts.items():
@@ -1454,7 +1359,7 @@ def eval_snow(args):
         snow_ckpts = {
             "mobilenet": pick_best_ckpt("models/student_snow/checkpoints/snow_gt_mobilenet_20260522_052052"),
             "convnext":  pick_best_ckpt("models/student_snow/checkpoints/snow_gt_convnext_unfrozen"),
-            "vit_lora":  pick_best_ckpt("models/student_snow/checkpoints/snow_gt_vit_lora_unfrozen"),
+            "vit_lora":  pick_newest_run_ckpt("models/student_snow/checkpoints", "snow_gt_vit_lora_*"),
         }
 
         for model_name, ckpt_path in snow_ckpts.items():
@@ -1796,40 +1701,6 @@ def eval_snow(args):
                         "iou": iou_r, "dice": rec,  # store recall as dice for summary compat
                         "recall_polygon": rec, "iou_roi": iou_r,
                     }
-
-    # DINOv3 multihead (Phase 1 pseudolabel decoder, no GT finetune)
-    if "multihead" in args.types:
-        print("\n--- Multihead (DINOv3MultiHead, Phase 1 pseudolabel) ---")
-        try:
-            metrics = eval_multihead_task(gt_masks, "snow", args, ckpt_path=args.multihead_ckpt, label="multihead_snow_pseudo")
-            if metrics is not None:
-                results["multihead_snow_pseudo"] = metrics
-        except Exception as e:
-            import traceback
-            print(f"  multihead snow eval failed: {e}")
-            traceback.print_exc()
-
-        print("\n--- Multihead OOD (Held-out Cameras: CM00054, CM00071, CM00115) ---")
-        ood_json_map = {
-            "CM00054": "data/annotations/54.json",
-            "CM00067": "data/annotations/67.json",
-            "CM00071": "data/annotations/71.json",
-            "CM00115": "data/annotations/115.json",
-        }
-        ood_masks = {}
-        for camera, json_path in ood_json_map.items():
-            if Path(json_path).exists():
-                ood_masks.update(load_gt_masks(Path(json_path), [camera], label_class="Snow Mano"))
-        print(f"  Loaded {len(ood_masks)} OOD GT snow masks")
-        if ood_masks:
-            try:
-                metrics = eval_multihead_task(ood_masks, "snow", args, ckpt_path=args.multihead_ckpt, label="multihead_snow_pseudo_ood")
-                if metrics is not None:
-                    results["multihead_snow_pseudo_ood"] = metrics
-            except Exception as e:
-                import traceback
-                print(f"  multihead snow OOD eval failed: {e}")
-                traceback.print_exc()
 
     # Summary
     print("\n" + "=" * 100)
@@ -2404,63 +2275,6 @@ def eval_qa(args):
                                                "single_ms": single_ms, "batch100_ms": batch_ms}
 
     # ─────────────────────────────────────────────────────────────────────
-    # 3b. DINOv3MultiHead QA head (binary usable/non-usable, sigmoid — same
-    #     shape as GradBoost/DINO+MLP, NOT the 3-class TinyQACNN)
-    # ─────────────────────────────────────────────────────────────────────
-    if "multihead" in [t.lower() for t in args.types]:
-        mh_ckpt_path = getattr(args, "multihead_ckpt", None) or \
-            "models/multi_head/checkpoints/dinov3_base/pseudo_phase1.pt"
-        mh_ckpt_path = Path(mh_ckpt_path)
-        if not mh_ckpt_path.exists():
-            print(f"\n--- DINOv3MultiHead QA --- SKIPPED (checkpoint not found: {mh_ckpt_path})")
-        else:
-            print(f"\n--- DINOv3MultiHead QA (ckpt: {mh_ckpt_path.name}) ---")
-            from multi_head.train_multihead import DINOv3MultiHead
-            device = torch.device(args.device)
-            mh_model = DINOv3MultiHead("dinov3_base").to(device)
-            mh_model.eval()
-            state = torch.load(mh_ckpt_path, map_location=device, weights_only=False)
-            if "state_dict" in state:
-                sd = {k.replace("model.", ""): v for k, v in state["state_dict"].items() if k.startswith("model.")}
-                mh_model.load_state_dict(sd, strict=False)
-            else:
-                print("  NOTE: Phase-1-only checkpoint has no qa_head weights (untrained, random init) — "
-                      "QA numbers below are meaningless until a Phase-2 (GT) checkpoint is used.")
-
-            # binary labels: use df["label"] (or qa_usable), matched to img_paths already built above
-            mh_labels, mh_paths = [], []
-            for _, row in df.iterrows():
-                p = _IMG_DIR / row["camera"] / f"{row['stem']}.jpg"
-                if p.exists():
-                    mh_paths.append(p)
-                    mh_labels.append(int(row["label"]))
-            mh_labels = np.array(mh_labels, dtype=np.int64)
-
-            import torchvision.transforms.v2 as T_mh
-            mh_size = 512
-            transform = T_mh.Compose([
-                T_mh.Resize((mh_size, mh_size)),
-                T_mh.ToImage(), T_mh.ToDtype(torch.float32, scale=True),
-                T_mh.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-            ])
-            mh_probs = []
-            with torch.no_grad():
-                for i in range(0, len(mh_paths), 32):
-                    batch = [transform(Image.open(p).convert("RGB")) for p in mh_paths[i:i+32]]
-                    x = torch.stack(batch).to(device)
-                    logits = mh_model.forward_qa(x)
-                    mh_probs.append(torch.sigmoid(logits).cpu().numpy())
-            mh_probs = np.concatenate(mh_probs)
-            try:
-                mh_auroc = roc_auc_score(mh_labels, mh_probs)
-            except ValueError:
-                mh_auroc = float("nan")
-            mh_f1 = f1_score(mh_labels, (mh_probs >= 0.5).astype(int))
-            print(f"  AUROC: {mh_auroc:.4f}")
-            print(f"  F1:    {mh_f1:.4f}")
-            results["DINOv3MultiHead_QA"] = {"auroc": mh_auroc, "f1": mh_f1}
-
-    # ─────────────────────────────────────────────────────────────────────
     # 4. PatchCore (per-camera anomaly models → image-level QA AUROC)
     # ─────────────────────────────────────────────────────────────────────
     _PC_RESULTS = Path("models/anomaly_snow/results/patchcore")
@@ -2777,45 +2591,6 @@ def eval_qa(args):
                 print(f"  TinyQACNN OOD: AUROC={cnn_ood_auroc:.4f}, F1={cnn_ood_f1:.4f}")
                 print(_cr(ood_labels, ood_preds, target_names=_QA_CLASS_NAMES, zero_division=0))
 
-            # DINOv3MultiHead QA OOD — binary (sigmoid), collapse 3-class GT:
-            # usable = clean_no_snow(0) or snow(1), non_usable = 2.
-            if "multihead" in [t.lower() for t in args.types]:
-                mh_ckpt_path = Path(getattr(args, "multihead_ckpt", None) or
-                    "models/multi_head/checkpoints/dinov3_base/pseudo_phase1.pt")
-                if not mh_ckpt_path.exists():
-                    print(f"  DINOv3MultiHead QA OOD: skipped (checkpoint not found: {mh_ckpt_path})")
-                else:
-                    from multi_head.train_multihead import DINOv3MultiHead
-                    import torchvision.transforms.v2 as T_mh_ood
-                    device = torch.device(args.device)
-                    mh_model = DINOv3MultiHead("dinov3_base").to(device)
-                    mh_model.eval()
-                    state = torch.load(mh_ckpt_path, map_location=device, weights_only=False)
-                    if "state_dict" in state:
-                        sd = {k.replace("model.", ""): v for k, v in state["state_dict"].items() if k.startswith("model.")}
-                        mh_model.load_state_dict(sd, strict=False)
-                        ood_labels_bin = (ood_labels != 2).astype(np.int64)  # usable=1, non_usable=0
-                        transform = T_mh_ood.Compose([
-                            T_mh_ood.Resize((512, 512)),
-                            T_mh_ood.ToImage(), T_mh_ood.ToDtype(torch.float32, scale=True),
-                            T_mh_ood.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-                        ])
-                        mh_ood_probs = []
-                        with torch.no_grad():
-                            for i in range(0, len(ood_img_paths), 32):
-                                batch = [transform(Image.open(p).convert("RGB")) for p in ood_img_paths[i:i+32]]
-                                x = torch.stack(batch).to(device)
-                                mh_ood_probs.append(torch.sigmoid(mh_model.forward_qa(x)).cpu().numpy())
-                        mh_ood_probs = np.concatenate(mh_ood_probs)
-                        try:
-                            mh_ood_auroc = roc_auc_score(ood_labels_bin, mh_ood_probs)
-                        except ValueError:
-                            mh_ood_auroc = float("nan")
-                        mh_ood_f1 = f1_score(ood_labels_bin, (mh_ood_probs >= 0.5).astype(int))
-                        print(f"  DINOv3MultiHead QA OOD: AUROC={mh_ood_auroc:.4f}, F1={mh_ood_f1:.4f}")
-                    else:
-                        print("  DINOv3MultiHead QA OOD: skipped (Phase-1-only checkpoint, qa_head untrained)")
-
             # DINOv2+MLP and DINOv3+MLP OOD
             # These models are binary (sigmoid output); skip if labels are 3-class
             n_qa_classes = len(np.unique(ood_labels))
@@ -3050,10 +2825,6 @@ def main():
                         choices=["ground", "snow", "smoother", "qa", "ood-per-camera"])
     parser.add_argument("--types", nargs="+", default=None, help="Evaluation types")
     parser.add_argument("--breakdown", action="store_true", help="Show per-camera breakdown")
-    parser.add_argument("--multihead-ckpt", type=str, default=None,
-                        help="Override checkpoint for --types multihead (default: "
-                             "checkpoints/dinov3_base/pseudo_phase1.pt). Accepts a Phase 1 "
-                             "pseudo_epochNNN.pt / pseudo_phase1.pt or a Phase 2 Lightning .ckpt.")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()
 

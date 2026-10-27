@@ -261,6 +261,8 @@ def main():
     parser.add_argument("--bce-weight", type=float, default=1.0)
     parser.add_argument("--dice-weight", type=float, default=0.5)
     parser.add_argument("--val-split", type=float, default=0.2)
+    parser.add_argument("--patience", type=int, default=20,
+                        help="Early-stopping patience on val_iou")
     parser.add_argument("--num-workers", type=int, default=8)
     parser.add_argument("--cameras", nargs="+", default=None)
     parser.add_argument("--sample", type=int, default=0)
@@ -472,7 +474,7 @@ def main():
             mode="max",
             save_top_k=3,
         ),
-        EarlyStopping(monitor="val_iou", patience=20, mode="max"),
+        EarlyStopping(monitor="val_iou", patience=args.patience, mode="max"),
         LearningRateMonitor(logging_interval="epoch"),
     ]
 

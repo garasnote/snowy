@@ -36,8 +36,7 @@ shows the raw value alone. Feed `frames` (or call repeatedly with the same
 camera_id) to accumulate a window.
 
 Mask encoding: base64 of an 8-bit grayscale PNG at the input frame's resolution,
-255 = positive. For the fusion stage the masks are 512x512 signatures, but the
-masks returned here are always at the frame's own size.
+255 = positive. Masks returned here are always at the frame's own size.
 
 Stage provenance (what each value is, and is not):
   qa_score      TinyQACNN, 3-class (clean_no_snow / snow / non_usable);

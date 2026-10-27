@@ -22,6 +22,7 @@ DATA_DIR="${DATA_DIR:-${MASTER_DIR}/data}"
 ANN_DIR="${ANN_DIR:-${MASTER_DIR}/data/annotations}"
 MODEL="${MODEL:-mobilenet}"
 EPOCHS="${EPOCHS:-200}"
+PATIENCE="${PATIENCE:-20}"
 LR="${LR:-1e-4}"
 BATCH_SIZE="${BATCH_SIZE:-16}"
 UNFREEZE="${UNFREEZE:-1}"
@@ -98,6 +99,7 @@ srun \
         --ann-dir ${ANN_DIR} \
         --fallback-img-dirs ${MASTER_DIR}/night_images \
         --epochs ${EPOCHS} \
+        --patience ${PATIENCE} \
         --lr ${LR} \
         --batch-size ${BATCH_SIZE} \
         --precision ${PRECISION} \

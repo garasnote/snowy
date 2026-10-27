@@ -12,7 +12,8 @@
 # table, not an error. This wrapper makes each of those loud, then runs the tasks
 # and diffs the logged numbers against the values printed in the manuscript.
 #
-# Prerequisites it checks and refuses to fake: data/, data/annotations/,
+# Prerequisites it checks and refuses to fake: the checkpoint layout (it links the
+# deposited files first, then verifies them against models/CHECKPOINTS.csv), data/, data/annotations/,
 # checkpoints under models/, and two derived inputs eval_all.py hardcodes
 # (analysis/snow_timeseries.csv, qa/checkpoints/qa_features.csv).
 set -uo pipefail
@@ -55,6 +56,27 @@ if [ "$n_img" -gt 0 ]; then ok "images under data/: $n_img jpgs"
 else bad "no jpgs under $DATA/<camera>/ — populate it (see How-to-guide.md, 'New Camera Onboarding')"; fi
 [ -d "$DATA/annotations" ] && ok "annotations: $(ls "$DATA/annotations" | wc -l) files" \
   || bad "annotations missing: $DATA/annotations"
+# The Zenodo record ships flat, renamed checkpoints; eval_all.py reads the original
+# run-directory layout. A first run on a fresh checkout needs this link step, and it
+# is idempotent, so it runs every time (LINK=0 skips it). --check then compares every
+# row of models/CHECKPOINTS.csv with what is on disk, including byte size, so a
+# renamed, truncated or substituted checkpoint is named here and not discovered as an
+# empty table row later.
+say "== checkpoint layout =="
+if [ "${LINK:-1}" = "0" ]; then
+  say "  [skip] LINK=0"
+elif [ ! -f models/CHECKPOINTS.csv ]; then
+  bad "models/CHECKPOINTS.csv missing - unpack the Zenodo record into the repo root first"
+else
+  "$PY" tools/link_deposit_models.py | sed 's/^/  /'
+  if "$PY" tools/link_deposit_models.py --check > "$OUT/checkpoint_check.txt" 2>&1; then
+    ok "$(head -1 "$OUT/checkpoint_check.txt")"
+  else
+    bad "checkpoints do not match models/CHECKPOINTS.csv (full list: $OUT/checkpoint_check.txt)"
+    sed 's/^/  /' "$OUT/checkpoint_check.txt" | head -40
+  fi
+fi
+
 for ck in models/best/ground_mobilenet_*.ckpt models/best/snow_mobilenet_*.ckpt \
           models/best/qa_cnn.pt; do
   ls $ck >/dev/null 2>&1 && ok "checkpoint: $ck" || bad "checkpoint missing: $ck"

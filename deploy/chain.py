@@ -7,9 +7,6 @@ wrong earlier in this project:
 * Every checkpoint load is audited. A filtered state_dict under strict=False let
   an earlier ViT-LoRA evaluation report an IoU with 84 of 256 layers still at
   random init. deploy/audit.py raises instead; this module uses it on every load.
-* Missing teacher masks are never zero-filled. fusion_cnn.py silently zero-fills
-  (models/fusion_cnn/fusion_cnn.py:495-500), which turns a missing channel into a
-  plausible-looking mask. The fusion helper here refuses instead.
 * psg_smoothed is null unless a real window exists. The smoother is a causal GRU
   over seq_len consecutive frames; one image is one timestep.
 * Features are computed by the repo's own functions, not reimplemented:
@@ -35,7 +32,7 @@ import argparse
 import contextlib
 import json
 import sys
-from collections import OrderedDict, defaultdict, deque
+from collections import defaultdict, deque
 from pathlib import Path
 
 import numpy as np
@@ -453,63 +450,6 @@ class SnowyPipeline:
         response = build_response(qa_score=qa, psg_raw=psg_raw, psg_smoothed=psg_smoothed,
                                   ground_mask=ground_mask, snow_mask=snow_mask, meta=meta)
         return response, {"ground_mask": ground_mask, "snow_mask": snow_mask, "psg_raw": psg_raw}
-
-
-# ── fusion helper: refuses missing channels instead of zero-filling ──────────
-FUSION_FOLDERS = {
-    "ground": OrderedDict([("dinov2_pca", "dinov2_pca"), ("segformer", "segformer"),
-                           ("deeplabv3", "deeplabv3"), ("sam3_text", "sam3/text"),
-                           ("depth", "depth/N0.05_F0.95")]),
-    "snow": OrderedDict([("clipseg", "clipseg"), ("florence2", "florence2"),
-                         ("groundedsam2", "groundedsam2"), ("sam3", "sam3"),
-                         ("yoloe", "yoloe"), ("seggpt", "seggpt")]),
-}
-
-
-def fusion_mask(ckpt, camera: str, stem: str, seg_root, size: int = 512):
-    """FusionCNN output for one frame — but only with EVERY teacher present.
-
-    fusion_cnn.py:495-500 zero-fills absent teacher masks and still writes a
-    plausible mask; that is exactly how a 0.4479 IoU row happened. Here a missing
-    channel is a hard error, and the channel order comes from the checkpoint's own
-    `teachers` list, not from a hardcoded constant.
-    """
-    import torch
-    # Loaded by file path: models/fusion_cnn/ has no __init__.py and nothing else in
-    # the repo imports it, so a plain `import fusion_cnn` would resolve to the
-    # *directory* and fail on the class name.
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "fusion_cnn_module", _REPO / "models" / "fusion_cnn" / "fusion_cnn.py")
-    fusion_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(fusion_mod)
-    FusionCNN = fusion_mod.FusionCNN
-
-    blob = torch.load(ckpt, map_location="cpu", weights_only=False)
-    teachers = list(blob["teachers"])
-    task = blob["task"]
-    folder_of = FUSION_FOLDERS[task]
-    missing = []
-    planes = []
-    for t in teachers:
-        p = Path(seg_root) / task / folder_of[t] / camera / f"{stem}_{task}.png"
-        if not p.exists():
-            missing.append(str(p))
-            planes.append(None)
-        else:
-            planes.append(np.array(Image.open(p).convert("L").resize((size, size), Image.NEAREST),
-                                   dtype=np.float32) / 255.0)
-    if missing:
-        raise FileNotFoundError(
-            f"refusing to fuse {camera}/{stem}: {len(missing)} of {len(teachers)} teacher "
-            f"channels are absent (fusion_cnn.py would zero-fill them silently): {missing[:3]}")
-
-    model = FusionCNN(n_teachers=len(teachers))
-    audit_mod.audit_against_model(model, blob["state_dict"],
-                                 name=f"fusion_{task} ({Path(ckpt).name})", allow_partial=False)
-    x = torch.from_numpy(np.stack(planes)[None, ...].astype(np.float32))
-    with torch.no_grad():
-        return model.eval()(x)[0, 0].numpy()
 
 
 def main(argv=None):

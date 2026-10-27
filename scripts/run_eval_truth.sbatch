@@ -85,7 +85,7 @@ srun \
     echo '==============================================='
     echo '=== SNOW STUDENTS ON THE TEMPORAL VAL SPLIT ==='
     echo '==============================================='
-    python -u eval_all.py --task snow --types students --val-only --device cuda || true
+    python -u eval_all.py --task snow --types students --device cuda || true
 
     echo ''
     echo '==============================================='

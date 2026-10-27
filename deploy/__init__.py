@@ -11,5 +11,5 @@ api        FastAPI app implementing the documented endpoint.
 app        Gradio demo for a free-tier CPU Space.
 
 Nothing in this package modifies or reimplements the research code: it imports
-student/ground/snow/fusion modules and the feature extractors from the repo.
+student/ground/snow modules and the feature extractors from the repo.
 """

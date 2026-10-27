@@ -8,6 +8,7 @@ and creates that layout, linking each flat file to the path it came from.
 
     python tools/link_deposit_models.py            # symlinks, the default
     python tools/link_deposit_models.py --copy     # real copies, ~10 GB
+    python tools/link_deposit_models.py --check    # verify only, exit 1 on any mismatch
 
 Run it once, after unpacking the record into the repository root.
 """
@@ -21,6 +22,44 @@ import sys
 from pathlib import Path
 
 
+def check(rows, root: Path) -> int:
+    """Compare the laid-out tree against CHECKPOINTS.csv. Reads, never writes.
+
+    Three ways a row can fail, reported separately because the fixes differ:
+      absent     nothing at source_run_dir/source_epoch_file (never linked, or the
+                 record did not contain it)
+      dangling   a symlink whose target is gone (the record was moved or deleted)
+      size       the file exists but its byte count is not the CSV's size_bytes,
+                 so it is a different or truncated checkpoint than the paper used
+    """
+    ok = 0
+    problems = {"absent": [], "dangling": [], "size": []}
+    for row in rows:
+        dst = root / row["source_run_dir"] / row["source_epoch_file"]
+        label = f"{row['filename']}  ->  {dst.relative_to(root)}"
+        if dst.is_symlink() and not dst.exists():
+            problems["dangling"].append(label)
+        elif not dst.exists():
+            problems["absent"].append(label)
+        else:
+            want = int(row["size_bytes"]) if row.get("size_bytes") else None
+            got = dst.stat().st_size  # follows the symlink to the real file
+            if want is not None and got != want:
+                problems["size"].append(f"{label}  (csv {want} B, on disk {got} B)")
+            else:
+                ok += 1
+    bad = sum(len(v) for v in problems.values())
+    print(f"checkpoints: {ok}/{len(rows)} match CHECKPOINTS.csv, {bad} do not")
+    notes = {"absent": "not in place", "dangling": "symlink points at nothing",
+             "size": "wrong size, not the checkpoint the paper used"}
+    for kind, items in problems.items():
+        if items:
+            print(f"\n{kind.upper()} - {notes[kind]} ({len(items)}):")
+            for item in items:
+                print(f"  {item}")
+    return 1 if bad else 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -28,6 +67,9 @@ def main(argv=None) -> int:
     ap.add_argument("--csv", default=None, help="CHECKPOINTS.csv (default: models/CHECKPOINTS.csv)")
     ap.add_argument("--copy", action="store_true", help="copy instead of symlink")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--check", action="store_true",
+                    help="change nothing; verify every CSV row is in place at the "
+                         "expected path with the expected size, exit 1 otherwise")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -37,6 +79,8 @@ def main(argv=None) -> int:
         return 2
 
     rows = list(csv.DictReader(csv_path.open()))
+    if args.check:
+        return check(rows, root)
     made = skipped = missing = 0
     missing_list = []
     by_name = None
