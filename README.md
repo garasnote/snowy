@@ -24,8 +24,6 @@ Running instructions: [How-to-guide.md](How-to-guide.md)
 | `tools/` | `reproduce_paper.sh`, valid-region masks, viewer, figure and video helpers |
 | `scripts/` | The Slurm jobs the experiments were submitted with, kept for provenance. Account, partition and user paths are generic |
 
-103 files are tracked: 42 Python modules, 24,536 lines.
-
 ## Install
 
 Python 3.11 or later.
