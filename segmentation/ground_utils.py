@@ -24,6 +24,8 @@ import re
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
+from paths import WORKSPACE_DIR
+
 import numpy as np
 from PIL import Image
 from scipy import ndimage
@@ -31,6 +33,7 @@ from tqdm import tqdm
 
 _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent
+_SEG_BASE = WORKSPACE_DIR / "segmentation"
 
 
 # =============================================================================
@@ -287,11 +290,11 @@ ENSEMBLE_DEFAULT_WEIGHTS = {
 def ensemble_build_method_dirs(base_dir, depth_combo="N0.05_F0.95"):
     """Build dict of method_name -> output directory."""
     return {
-        "segformer": base_dir / "segformer_output",
-        "deeplabv3": base_dir / "deeplabv3_output",
-        "depth": base_dir / "depth_output" / depth_combo,
-        "sam3_text": base_dir / "sam3_dino_output" / "text",
-        "sam3_dino": base_dir / "sam3_dino_output" / "dino+sam",
+        "segformer": base_dir / "segformer",
+        "deeplabv3": base_dir / "deeplabv3",
+        "depth": base_dir / "depth" / depth_combo,
+        "sam3_text": base_dir / "sam3" / "text",
+        "dinov2_pca": base_dir / "dinov2_pca",
     }
 
 
@@ -382,10 +385,10 @@ def add_ensemble_subparser(subparsers):
     p = subparsers.add_parser(
         "ensemble", help="Majority-vote ensemble across ground_teachers.py outputs")
     p.add_argument("--base-dir", type=str,
-                    default=str(_REPO_ROOT / "preprocessing" / "segmentation"),
+                    default=str(_SEG_BASE / "ground"),
                     help="Base directory containing all method outputs")
     p.add_argument("--output-dir", type=str,
-                    default=str(_REPO_ROOT / "preprocessing" / "segmentation" / "ensemble_output"),
+                    default=str(_SEG_BASE / "ensemble_output"),
                     help="Output directory")
     p.add_argument("--cameras", nargs="+", default=[],
                     help="Specific cameras (default: auto-detect)")

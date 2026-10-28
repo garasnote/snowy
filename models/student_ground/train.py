@@ -63,17 +63,18 @@ from torchvision.utils import make_grid
 _HERE = Path(__file__).resolve().parent          # repo/models/student_ground/
 _MODELS_DIR = _HERE.parent                       # repo/models/
 _REPO_ROOT = _HERE.parent.parent                 # repo/
-_SEG_OUTPUT = _REPO_ROOT / "preprocessing" / "segmentation"  # where output data lives
 
 if str(_MODELS_DIR) not in sys.path:
     sys.path.insert(0, str(_MODELS_DIR))
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from paths import DATA_DIR
+from paths import DATA_DIR, WORKSPACE_DIR
 from student_ground.configs import MODEL_REGISTRY, get_config, IMAGENET_MEAN, IMAGENET_STD
 from student_ground.dataset import build_dataloaders, build_gt_dataloaders
 from student_ground.losses import combined_loss
+
+_SEG_OUTPUT = WORKSPACE_DIR / "segmentation"
 from student_ground.models import build_model
 
 

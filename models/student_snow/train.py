@@ -39,10 +39,16 @@ except (ImportError, ModuleNotFoundError):
 
 _HERE = Path(__file__).resolve().parent
 _MODELS_DIR = _HERE.parent
-_SEG_OUTPUT = _HERE.parent.parent / "preprocessing" / "segmentation"
 
 if str(_MODELS_DIR) not in sys.path:
     sys.path.insert(0, str(_MODELS_DIR))
+
+if str(_HERE.parent.parent) not in sys.path:
+    sys.path.insert(0, str(_HERE.parent.parent))
+
+from paths import WORKSPACE_DIR
+
+_SEG_OUTPUT = WORKSPACE_DIR / "segmentation"
 
 # Reuse everything from student_ground
 from student_ground.configs import get_config, IMAGENET_MEAN, IMAGENET_STD

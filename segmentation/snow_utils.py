@@ -30,6 +30,8 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
+from paths import WORKSPACE_DIR
+
 import cv2
 import numpy as np
 from PIL import Image
@@ -37,6 +39,7 @@ from tqdm import tqdm
 
 _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent
+_SEG_BASE = WORKSPACE_DIR / "segmentation"
 
 CAMERAS = [
     "CF00001", "CM00006", "CM00009", "CM00014",
@@ -297,13 +300,12 @@ ENSEMBLE_DEFAULT_WEIGHTS = {
 def ensemble_build_method_dirs(base_dir):
     """Build dict of method_name -> output directory."""
     return {
-        "hsv": base_dir / "hsv_snow_output_mobilenet_ft",
-        "sam3": base_dir / "sam3_snow_output",
-        "yoloe": base_dir / "yoloe_snow_output",
-        "florence2": base_dir / "florence2_snow_output",
-        "groundedsam2": base_dir / "groundedsam2_snow_output",
-        "clipseg": base_dir / "clipseg_snow_output",
-        "seggpt": base_dir / "seggpt_snow_output",
+        "sam3": base_dir / "sam3",
+        "yoloe": base_dir / "yoloe",
+        "florence2": base_dir / "florence2",
+        "groundedsam2": base_dir / "groundedsam2",
+        "clipseg": base_dir / "clipseg",
+        "seggpt": base_dir / "seggpt",
     }
 
 
@@ -437,10 +439,10 @@ def add_ensemble_subparser(subparsers):
     p = subparsers.add_parser(
         "ensemble", help="Majority-vote ensemble across snow_teachers.py outputs")
     p.add_argument("--base-dir", type=str,
-                    default=str(_REPO_ROOT / "preprocessing" / "segmentation"),
+                    default=str(_SEG_BASE / "snow"),
                     help="Base directory containing all method outputs")
     p.add_argument("--output-dir", type=str,
-                    default=str(_REPO_ROOT / "preprocessing" / "segmentation" / "ensemble_snow_output"),
+                    default=str(_SEG_BASE / "ensemble_snow_output"),
                     help="Output directory")
     p.add_argument("--cameras", nargs="+", default=[],
                     help="Specific cameras (default: auto-detect)")
