@@ -67,21 +67,30 @@ srun \
 
     echo ""
     echo "Cloning and installing SAM3..."
-    if [ ! -d "master/sam3" ]; then
-        git clone https://github.com/facebookresearch/sam3.git
-        cd sam3
-        pip install --break-system-packages -e .
-        echo ""
-        echo "Installing SAM3 notebook dependencies (includes huggingface-hub for checkpoint access)..."
-        pip install --break-system-packages -e ".[notebooks]"
-        cd ..
-    else
-        echo "SAM3 directory already exists, skipping clone..."
-        cd master/sam3
-        pip install --break-system-packages -e .
-        pip install --break-system-packages -e ".[notebooks]"
-        cd ..
+    # The guard used to check master/sam3 while `git clone` wrote ./sam3 (the
+    # cwd here, which is the directory *above* the repo). A second run, or any
+    # tree carrying a partial sam3/ from a previous build, then died on
+    # "fatal: destination path sam3 already exists and is not an empty
+    # directory". Check and clone the same path, and treat a non-git directory
+    # as stale rather than trustworthy.
+    SAM3_DIR="master/sam3"
+    if [ "${SNOW_FORCE_SAM3:-0}" = "1" ] && [ -d "$SAM3_DIR" ]; then
+        echo "  SNOW_FORCE_SAM3=1 -- removing $SAM3_DIR for a clean re-clone"
+        rm -rf "$SAM3_DIR"
     fi
+    if [ -d "$SAM3_DIR" ] && [ ! -d "$SAM3_DIR/.git" ]; then
+        echo "  $SAM3_DIR exists but is not a git checkout -- removing it"
+        rm -rf "$SAM3_DIR"
+    fi
+    if [ ! -d "$SAM3_DIR" ]; then
+        git clone --depth 1 https://github.com/facebookresearch/sam3.git "$SAM3_DIR"
+    else
+        echo "  $SAM3_DIR is already a git checkout -- reusing it (SNOW_FORCE_SAM3=1 to re-clone)"
+    fi
+    pip install --break-system-packages -e "$SAM3_DIR"
+    echo ""
+    echo "Installing SAM3 notebook dependencies (includes huggingface-hub for checkpoint access)..."
+    pip install --break-system-packages -e "$SAM3_DIR[notebooks]"
 
     echo ""
     echo "Final verification..."
