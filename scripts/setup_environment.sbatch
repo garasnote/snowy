@@ -93,6 +93,29 @@ srun \
     pip install --break-system-packages -e "$SAM3_DIR[notebooks]"
 
     echo ""
+    echo "Cloning and installing SAM2 (the groundedsam2 teacher refines its masks with it)..."
+    # The Dockerfile performs this clone; this script did not, so an image built
+    # here could not run `snow_teachers.py groundedsam2` at all
+    # (ModuleNotFoundError: No module named sam2) while the Docker image could.
+    # Cloned to /opt, as in the Dockerfile: sam2 refuses to import when the cwd
+    # contains a sam2/ subdirectory, and every repo script runs from the repo.
+    SAM2_DIR="/opt/sam2"
+    if [ "${SNOW_FORCE_SAM2:-0}" = "1" ] && [ -d "$SAM2_DIR" ]; then
+        echo "  SNOW_FORCE_SAM2=1 -- removing $SAM2_DIR for a clean re-clone"
+        rm -rf "$SAM2_DIR"
+    fi
+    if [ -d "$SAM2_DIR" ] && [ ! -d "$SAM2_DIR/.git" ]; then
+        echo "  $SAM2_DIR exists but is not a git checkout -- removing it"
+        rm -rf "$SAM2_DIR"
+    fi
+    if [ ! -d "$SAM2_DIR" ]; then
+        git clone --depth 1 https://github.com/facebookresearch/sam2.git "$SAM2_DIR"
+    else
+        echo "  $SAM2_DIR is already a git checkout -- reusing it (SNOW_FORCE_SAM2=1 to re-clone)"
+    fi
+    pip install --break-system-packages -e "$SAM2_DIR"
+
+    echo ""
     echo "Final verification..."
     python -c "import torch; print(f\"✓ PyTorch: {torch.__version__}\")"
     python -c "import torch; print(f\"✓ CUDA available: {torch.cuda.is_available()}\")"
@@ -102,6 +125,13 @@ srun \
     python -c "import pandas; print(f\"✓ Pandas: {pandas.__version__}\")"
     python -c "import lightning; print(f\"✓ Lightning: {lightning.__version__}\")"
     python -c "from sam3.model_builder import build_sam3_image_model; print(\"✓ SAM3 installed successfully\")"
+    # The three teacher dependencies that were missing from images built by this
+    # script while being present in the Docker image: fail the BUILD here rather
+    # than at the first teacher job, which is where they used to surface.
+    python -c "from sam2.sam2_image_predictor import SAM2ImagePredictor; print(\"✓ SAM2 installed successfully\")"
+    python -c "import ultralytics; print(f\"✓ ultralytics: {ultralytics.__version__}\")"
+    python -c "import clip; print(\"✓ clip (YOLOE text prompts) installed successfully\")"
+    python -c "import transformers; assert transformers.__version__.startswith(\"4.\"); print(f\"✓ transformers: {transformers.__version__}\")"
 
     echo ""
     echo "========================================="
