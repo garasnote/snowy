@@ -77,6 +77,14 @@ imageio-ffmpeg
 # original pasted file)
 ultralytics
 
+# YOLOE's text-prompt path imports `clip` at model load, and ultralytics does
+# not pull it in as a dependency:
+#   ModuleNotFoundError: No module named 'clip'
+# The OpenCLIP package is a different module name (`open_clip`), so it does not
+# satisfy the import. Nothing on PyPI provides `clip` under a dependable name —
+# it comes from the source repo, same shape as sam3 and sam2.
+clip @ git+https://github.com/openai/CLIP.git
+
 # sam2 (GroundedSAM2 teacher's mask-refinement step) is NOT pip-installed
 # here — like SAM3, it has no clean PyPI release; it's git-cloned and
 # installed with -e in the Dockerfile instead.
