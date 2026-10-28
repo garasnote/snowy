@@ -14,9 +14,14 @@
 # segmentation/app_segmentation_comparison.py) is listed below, since that
 # code is part of this release.
 
-numpy
+# Both pinned to the major that the paper was produced on (numpy 1.26, pandas 2.x):
+# unpinned, a fresh resolve in Oct 2026 pulls pandas 3.x, which requires numpy 2
+# while torch 2.7 and the OpenMMLab stack keep numpy on 1.26 -- pandas then
+# installs with no C extension and every script dies at `import pandas`
+# (ImportError: C extension: None not built).
+numpy<2
 opencv-python
-pandas
+pandas<3
 matplotlib
 lightning>=2.1.0
 torchmetrics>=1.2.0
