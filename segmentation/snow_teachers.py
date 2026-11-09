@@ -432,6 +432,10 @@ def add_florence2_subparser(subparsers):
                     help="Florence-2 model size (default: large)")
     p.add_argument("--text-prompt", type=str, default="snow",
                     help="Text prompt for segmentation (default: snow)")
+    p.add_argument("--shard-index", type=int, default=0,
+                    help="Which shard of the camera to process (0-based)")
+    p.add_argument("--shard-count", type=int, default=1,
+                    help="How many shards the camera is split into")
     return p
 
 
@@ -460,6 +464,9 @@ def run_florence2(args):
             print(f"  WARNING: {cam_dir} does not exist, skipping")
             continue
         jpgs = _sample_jpgs(cam_dir, args.sample)
+        if getattr(args, "shard_count", 1) > 1:
+            jpgs = jpgs[getattr(args, "shard_index", 0)::getattr(args, "shard_count", 1)]
+            print(f"  {cam}: shard {args.shard_index}/{args.shard_count} -> {len(jpgs)} images")
         print(f"\n  {cam}: processing {len(jpgs)} images")
         for img_path in tqdm(jpgs, desc=f"  {cam}", leave=True):
             result = florence2_process_image(

@@ -24,13 +24,13 @@ Usage:
 """
 
 import argparse
+import sys
 import csv
 import re
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-from paths import WORKSPACE_DIR
 
 import cv2
 import numpy as np
@@ -39,6 +39,10 @@ from tqdm import tqdm
 
 _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from paths import WORKSPACE_DIR
+
 _SEG_BASE = WORKSPACE_DIR / "segmentation"
 
 CAMERAS = [
@@ -486,7 +490,7 @@ def run_ensemble(args):
         ground_base = None
         print("  NOTE: --frame-fraction given; snow_pct stays frame-wide (legacy behaviour)")
     else:
-        ground_base = base_dir / "student_ground_output" / args.ground_source
+        ground_base = _resolve_ground_base(base_dir, args.ground_source)
         if not ground_base.exists():
             print(f"  WARNING: ground source not found ({ground_base}); snow_pct falls back to frame-wide")
             ground_base = None
@@ -627,11 +631,28 @@ def run_ensemble(args):
 # alongside it with suffix `_ground_clipped` containing the same file
 # layout but masked.
 
+def _resolve_ground_base(base_dir, ground_source):
+    """Ground masks for the snow metric and the clip step.
+
+    The documented layout is <base>/student_ground_output/<model>, written by a
+    ground student run. When that is absent, fall back to the ground ensemble
+    that the pipeline does produce, so snow is still measured and clipped against
+    the ground region instead of silently going frame-wide.
+    """
+    cand = Path(base_dir) / "student_ground_output" / str(ground_source)
+    if cand.exists():
+        return cand
+    fallback = Path(_SEG_BASE) / "ensemble_output" / "majority_3"
+    return fallback if fallback.exists() else cand
+
+
 CLIP_METHOD_DIRS = {
-    "hsv":       "hsv_snow_output_mobilenet_ft",
-    "sam3":      "sam3_snow_output",
-    "yoloe":     "yoloe_snow_output",
-    "florence2": "florence2_snow_output",
+    "clipseg":      "clipseg",
+    "florence2":    "florence2",
+    "groundedsam2": "groundedsam2",
+    "sam3":         "sam3",
+    "yoloe":        "yoloe",
+    "seggpt":       "seggpt",
 }
 
 
@@ -679,7 +700,7 @@ def add_clip_to_ground_subparser(subparsers):
 
 def run_clip_to_ground(args):
     base = args.base_dir
-    ground_base = base / "student_ground_output" / args.ground_source
+    ground_base = _resolve_ground_base(base, args.ground_source)
     if not ground_base.exists():
         print(f"ERROR: ground source not found: {ground_base}")
         return

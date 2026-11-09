@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=teacher-gaps
-#SBATCH --partition=gpu
+#SBATCH --partition=frida
 #SBATCH --time=02:00:00
 #SBATCH --gres=gpu:1
 # GPU model matters here. The container's PyTorch is built for sm_50..sm_90, while
@@ -89,8 +89,6 @@ export PYTHONPATH="${RELEASE_DIR}${PY_EXTRA_PART}"
 # facebook/sam3 answered 401. Point HF at the mounted home cache instead, and
 # take the token from .hf_token if present, else from the hub token file.
 export HF_HOME="\${HF_CACHE:-${MASTER_DIR}/.cache/huggingface}"
-export HUGGINGFACE_HUB_CACHE="\${HF_HOME}/hub"
-export TRANSFORMERS_CACHE="\${HF_HOME}/hub"
 TOKEN_FILE=""
 # Candidates in order: <master>/.hf_token, the home dir's .hf_token (where this
 # cluster actually keeps it), then the hub token file huggingface-cli writes.

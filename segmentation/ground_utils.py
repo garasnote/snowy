@@ -19,12 +19,12 @@ of each (they were independent scripts and keep their original flags).
 """
 
 import argparse
+import sys
 import csv
 import re
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-from paths import WORKSPACE_DIR
 
 import numpy as np
 from PIL import Image
@@ -33,6 +33,10 @@ from tqdm import tqdm
 
 _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from paths import WORKSPACE_DIR
+
 _SEG_BASE = WORKSPACE_DIR / "segmentation"
 
 

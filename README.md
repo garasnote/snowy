@@ -1,7 +1,6 @@
-# Snowy: webcam snow cover for Alpine weather stations
+# Snowy: webcam snow cover for Slovenian weather stations
 
-Code for *Multi-Modal Machine Learning for Image-Based Snow Coverage Estimation*
-(Osorio Rivera and Faganeli Pucer, submitted to *Computers & Geosciences*).
+Code for *Multi-Modal Machine Learning for Image-Based Snow Coverage Estimation*.
 
 The pipeline estimates snow on the ground from fixed webcam images. A quality gate drops frames that cannot be used, then a ground student segments the terrain the camera can see and a snow student segments snow inside that terrain. A recurrent smoother turns the per-frame fractions into a daily series, which is compared against manual snow records from the Slovenian Environment Agency (ARSO).
 
@@ -171,18 +170,9 @@ pretrained teachers backbones, which come from their own projects.
 
 ## Citation
 
-```bibtex
-@article{osorio2026snowy,
-  title   = {Multi-Modal Machine Learning for Image-Based Snow Coverage Estimation},
-  author  = {Osorio Rivera, Juan Pablo and Faganeli Pucer, Jana},
-  journal = {Computers \& Geosciences},
-  year    = {2026},
-  note    = {Submitted}
-}
-```
-
-The dataset and the checkpoints have their own DOI,
-https://doi.org/10.5281/zenodo.23386293. Cite both when you reuse the models.
+The manuscript is not published yet, so there is no paper to cite. This section
+gets its BibTeX entry once the preprint is on arXiv. Until then, cite the dataset
+and the checkpoints by their DOI, https://doi.org/10.5281/zenodo.23386293.
 
 ## License and acknowledgements
 

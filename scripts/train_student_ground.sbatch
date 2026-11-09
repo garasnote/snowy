@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=student-ground
-#SBATCH --partition=gpu
+#SBATCH --partition=frida
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:L4:1
 #SBATCH --cpus-per-task=8
@@ -79,9 +79,11 @@ fi
 srun \
   --container-image=${CONTAINER} \
   --container-mounts=/shared:/shared \
-  --container-workdir=/shared/home/${CLUSTER_USER}/master \
+  --container-workdir=/shared/home/${CLUSTER_USER}/snowy \
   bash -c "
     set -e
+    export SNOW_WORKSPACE_DIR=${SNOW_WORKSPACE_DIR:-/shared/workspace/lkm/${CLUSTER_USER}/snowy_ws}
+    export SNOW_DATA_DIR=${SNOW_DATA_DIR:-/shared/home/${CLUSTER_USER}/snowy/data}
     export HF_TOKEN='${HF_TOKEN}'
     echo 'Starting training at \$(date)'
     nvidia-smi

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=student-snow
-#SBATCH --partition=gpu
+#SBATCH --partition=frida
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
@@ -94,13 +94,15 @@ srun \
   --container-workdir=${MASTER_DIR} \
   bash -c "
     set -e
+    export SNOW_WORKSPACE_DIR=${SNOW_WORKSPACE_DIR:-/shared/workspace/lkm/${CLUSTER_USER}/snowy_ws}
+    export SNOW_DATA_DIR=${SNOW_DATA_DIR:-/shared/home/${CLUSTER_USER}/snowy/data}
     export HF_TOKEN='${HF_TOKEN}'
     pip install --break-system-packages --quiet tensorboard 2>/dev/null || true
     echo 'Starting training at \$(date)'
     nvidia-smi
     echo ''
 
-    for thresh in 2 3 4 5; do
+    for thresh in ${THRESHOLDS:-3}; do
       echo ''
       echo '============================================================'
       echo \"Training majority_\${thresh} at \$(date)\"

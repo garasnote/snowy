@@ -17,6 +17,8 @@ import argparse
 import sys
 from pathlib import Path
 import json
+import os
+import re
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from paths import WORKSPACE_DIR
@@ -341,14 +343,13 @@ def eval_ground(args):
     data_dir = Path("data")
 
     gt_masks = {}
-    for gt_json in [
-        Path("data/annotations/ground_annotations.json"),
-        Path("data/annotations/san.json"),
-        Path("data/annotations/heroku.json"),
-    ]:
-        if gt_json.exists():
-            gt_masks.update(load_gt_masks(gt_json, cameras))
-    print(f"\nLoaded {len(gt_masks)} GT masks (ground_annotations + san + heroku)")
+    # Ground GT comes from the ground-only labelling pass. san.json and heroku.json hold
+    # "Snow Mano" brushes and used to be merged here without a label filter, which scored
+    # 42 snow masks as ground truth (254 frames instead of the 212 the paper reports).
+    gt_json = Path("data/annotations/ground_annotations.json")
+    if gt_json.exists():
+        gt_masks.update(load_gt_masks(gt_json, cameras, label_class="Ground"))
+    print(f"\nLoaded {len(gt_masks)} GT masks (ground_annotations, brushlabel Ground)")
     gt_masks = heldout_split(gt_masks, "ground GT masks")
 
     results = {}
@@ -2588,6 +2589,14 @@ def eval_qa(args):
                 except ValueError:
                     cnn_ood_auroc = float("nan")
                 cnn_ood_f1 = _f1(ood_labels, ood_preds, average="macro")
+                # Binary usable-vs-rest AUROC: the number tab:qa reports, and the one
+                # qa/qa_ood_eer.py computes. The 3-class macro value is printed after it.
+                _keep = (ood_labels == 1).astype(int)
+                try:
+                    cnn_ood_bin = _roc(_keep, ood_probs[:, 1])
+                except ValueError:
+                    cnn_ood_bin = float("nan")
+                print(f"  TinyQACNN OOD AUROC (usable vs rest)={cnn_ood_bin:.4f}")
                 print(f"  TinyQACNN OOD: AUROC={cnn_ood_auroc:.4f}, F1={cnn_ood_f1:.4f}")
                 print(_cr(ood_labels, ood_preds, target_names=_QA_CLASS_NAMES, zero_division=0))
 
@@ -2654,8 +2663,8 @@ OODCAM_JSON_MAP = {
     "CM00115": "data/annotations/115.json",
 }
 
-OODCAM_GROUND_CKPT = "models/student_ground/checkpoints/finetune_mobilenet_kfold_1_20260610_230732/best-epoch=48-iouval_iou=0.916.ckpt"
-OODCAM_SNOW_CKPT = "models/student_snow/checkpoints/snow_gt_mobilenet_20260522_052052/best-epoch=65-iouval_iou=0.821.ckpt"
+OODCAM_GROUND_CKPT = pick_best_ckpt("models/student_ground/checkpoints/finetune_mobilenet_kfold_1_20260610_230732")
+OODCAM_SNOW_CKPT = pick_best_ckpt("models/student_snow/checkpoints/snow_gt_mobilenet_20260522_052052")
 
 OODCAM_DATA_DIR = Path("data")
 
@@ -2789,6 +2798,10 @@ def eval_oodcam(args):
     device = torch.device(args.device)
 
     print("=== Ground (per-camera) ===")
+    for _name, _ck in (("ground", OODCAM_GROUND_CKPT), ("snow", OODCAM_SNOW_CKPT)):
+        if _ck is None:
+            raise SystemExit(f"ood-per-camera: no checkpoint found for the {_name} student; "
+                             "run tools/link_deposit_models.py so the deposit checkpoints appear under models/")
     ground_results = oodcam_eval_seg_per_camera("ground", OODCAM_GROUND_CKPT, "Ground Mano", device)
     for cam in OODCAM_CAMERAS:
         r = ground_results[cam]
